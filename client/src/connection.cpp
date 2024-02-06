@@ -141,6 +141,15 @@ public:
 
   void add_observer(observer* o) override { m_observers.emplace_back(std::move(o)); }
 
+  void notify_ready() override
+  {
+    writer w("ready", 0);
+
+    write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), w.complete(), nullptr, nullptr);
+  }
+
+  void set_streaming_enabled(const bool enabled) override { m_streaming_enabled = enabled; }
+
 protected:
   static auto get_self(uv_handle_t* handle) -> connection_impl*
   {
@@ -223,56 +232,13 @@ protected:
 
   void handle_message(const read_result& r)
   {
-    if (r.type_id == "image::update") {
-      handle_image_update(r);
-    } else {
-      std::ostringstream msg;
-      msg << "Unknown message type '" << r.type_id << "'.";
-      notify_error(msg.str().c_str());
-    }
-  }
-
-  struct image_update_header final
-  {
-    std::uint16_t w{};
-    std::uint16_t h{};
-    std::uint16_t c{};
-    std::uint16_t m{};
-  };
-
-  void handle_image_update(const read_result& r)
-  {
-    const auto* payload_ptr = m_read_buffer.data() + r.payload_offset;
-
-    static_assert(sizeof(image_update_header) == 8, "Image update header must be 8 bytes in size.");
-
-    const image_update_header* hdr = reinterpret_cast<const image_update_header*>(payload_ptr);
-
-    const auto* image_data = payload_ptr + 8;
-
-    if ((static_cast<std::size_t>(hdr->w) * hdr->h * hdr->c) > r.payload_size) {
-      notify_error("Missing image data in payload.");
-      respond_image_update(/* success = */ false);
-      return;
+    for (auto* o : m_observers) {
+      o->on_payload(r.type_id, m_read_buffer.data() + r.payload_offset, r.payload_size);
     }
 
-    for (auto* obs : m_observers) {
-      obs->on_image(hdr->w, hdr->h, hdr->c, image_data);
+    if (m_streaming_enabled) {
+      notify_ready();
     }
-
-    respond_image_update(/* success = */ true);
-  }
-
-  void respond_image_update(const bool success)
-  {
-    if (!success) {
-      /* TODO : we should send an error message back to the server for logging purposes. */
-      return;
-    }
-
-    writer w("ready", 0);
-
-    write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), w.complete(), nullptr, nullptr);
   }
 
   void notify_error(const char* what)
@@ -294,6 +260,8 @@ private:
   std::vector<std::uint8_t> m_read_buffer;
 
   std::size_t m_read_size{ 0 };
+
+  bool m_streaming_enabled{ true };
 };
 
 } // namespace

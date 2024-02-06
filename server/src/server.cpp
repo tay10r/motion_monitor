@@ -4,9 +4,10 @@
 
 #include <motion_monitor_proto.h>
 
-#include <uv.h>
+#include "uv.h"
 
 #include <algorithm>
+#include <sstream>
 #include <vector>
 
 #include <spdlog/spdlog.h>
@@ -14,83 +15,6 @@
 #include <cstring>
 
 namespace {
-
-auto
-to_handle(uv_tcp_t* handle) -> uv_handle_t*
-{
-  return reinterpret_cast<uv_handle_t*>(handle);
-}
-
-auto
-to_handle(uv_stream_t* handle) -> uv_handle_t*
-{
-  return reinterpret_cast<uv_handle_t*>(handle);
-}
-
-auto
-to_handle(uv_write_t* handle) -> uv_handle_t*
-{
-  return reinterpret_cast<uv_handle_t*>(handle);
-}
-
-class write_operation final
-{
-public:
-  using complete_cb = void (*)(void*, bool success);
-
-  static void send(uv_stream_t* socket, std::vector<std::uint8_t> data, void* cb_data, complete_cb cb_func)
-  {
-    auto* op = new write_operation(std::move(data), cb_data, cb_func);
-
-    if (!op->send(socket)) {
-      spdlog::error("Failed to send message.");
-      if (cb_func) {
-        cb_func(cb_data, false);
-      }
-      delete op;
-    }
-  }
-
-protected:
-  write_operation(std::vector<std::uint8_t> data, void* cb_data, complete_cb cb_func)
-    : m_data(std::move(data))
-    , m_cb_data(cb_data)
-    , m_cb_func(cb_func)
-  {
-    m_buffer.base = reinterpret_cast<char*>(&m_data[0]);
-    m_buffer.len = m_data.size();
-
-    uv_handle_set_data(to_handle(&m_handle), this);
-  }
-
-  auto send(uv_stream_t* socket) -> bool { return uv_write(&m_handle, socket, &m_buffer, 1, on_write_complete) == 0; }
-
-  static void on_write_complete(uv_write_t* handle, int status)
-  {
-    auto* self = static_cast<write_operation*>(uv_handle_get_data(to_handle(handle)));
-
-    if (self->m_cb_func) {
-      self->m_cb_func(self->m_cb_data, status == 0);
-    }
-
-    delete self;
-
-    if (status != 0) {
-      spdlog::error("Failed to complete write operation.");
-    }
-  }
-
-private:
-  std::vector<std::uint8_t> m_data;
-
-  uv_buf_t m_buffer{};
-
-  uv_write_t m_handle{};
-
-  void* m_cb_data{ nullptr };
-
-  complete_cb m_cb_func{ nullptr };
-};
 
 template<typename Scalar>
 auto
@@ -100,22 +24,13 @@ clamp(Scalar x, Scalar min, Scalar max) -> Scalar
 }
 
 auto
-encode_message(const image& img, const float motion)
+encode_message(const image& img, const std::uint32_t sensor_id)
 {
-  const auto motion_u16 = clamp(static_cast<int>(motion * 65535), 0, 65535);
+  using namespace std::chrono;
 
-  const std::uint16_t header[4]{ static_cast<std::uint16_t>(img.width),
-                                 static_cast<std::uint16_t>(img.height),
-                                 static_cast<std::uint16_t>(img.channels),
-                                 static_cast<std::uint16_t>(motion_u16) };
+  const auto ts = time_point_cast<microseconds>(system_clock::now()).time_since_epoch().count();
 
-  motion_monitor::writer writer("image::update", img.data.size() + sizeof(header));
-
-  writer.write(header, sizeof(header));
-
-  writer.write(img.data.data(), img.data.size());
-
-  return writer.complete();
+  return motion_monitor::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
 }
 
 class client final
@@ -157,13 +72,13 @@ public:
     return uv_read_start(reinterpret_cast<uv_stream_t*>(&m_socket), on_alloc, on_read) == 0;
   }
 
-  void publish_frame(const image& img, const float motion)
+  void publish_frame(const image& img, const std::uint32_t sensor_id, const float anomaly_level)
   {
-    if (!m_ready) {
+    if (!m_ready || (anomaly_level <= m_anomaly_threshold)) {
       return;
     }
 
-    auto data = encode_message(img, motion);
+    auto data = encode_message(img, sensor_id);
 
     write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), std::move(data), this, on_image_write_complete);
 
@@ -246,6 +161,8 @@ private:
   std::size_t m_read_size{};
 
   bool m_ready{ true };
+
+  float m_anomaly_threshold{ 0 };
 };
 
 class server_impl final : public server
@@ -282,7 +199,7 @@ public:
       return false;
     }
 
-    spdlog::info("Server is listening for incoming connections.");
+    spdlog::info("Server is listening for incoming connections at '{}:{}'.", ip, port);
 
     return true;
   }
@@ -299,10 +216,10 @@ public:
     }
   }
 
-  void publish_frame(const image& img, const float motion) override
+  void publish_frame(const image& img, const std::uint32_t sensor_id, const float anomaly_level) override
   {
     for (auto& c : m_clients) {
-      c->publish_frame(img, motion);
+      c->publish_frame(img, sensor_id, anomaly_level);
     }
   }
 
@@ -355,6 +272,8 @@ private:
   uv_tcp_t m_socket{};
 
   std::vector<std::unique_ptr<client>> m_clients;
+
+  std::string m_socket_address;
 };
 
 } // namespace

@@ -4,6 +4,8 @@
 
 #include <uv.h>
 
+#include <cstdint>
+
 struct image;
 
 class server
@@ -27,5 +29,5 @@ public:
 
   virtual auto setup(const char* ip, int port) -> bool = 0;
 
-  virtual void publish_frame(const image& img, const float motion) = 0;
+  virtual void publish_frame(const image& img, const std::uint32_t sensor_id, const float anomaly_level) = 0;
 };

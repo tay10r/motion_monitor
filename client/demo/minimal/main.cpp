@@ -17,10 +17,9 @@ public:
 
   void on_connection_closed() override { std::cout << "connection closed" << std::endl; }
 
-  void on_image(std::size_t w, std::size_t h, std::size_t c, const std::uint8_t* data) override
+  void on_payload(const std::string& type, const void* payload, const std::size_t payload_size) override
   {
-    std::cout << "on image" << std::endl;
-    //
+    std::cout << "received message of payload type '" << type << "'." << std::endl;
   }
 };
 

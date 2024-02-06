@@ -47,4 +47,78 @@ writer::complete() -> std::vector<std::uint8_t>
   return std::move(m_data);
 }
 
+auto
+writer::create_rgb_camera_update(const std::uint8_t* data,
+                                 std::uint16_t w,
+                                 std::uint16_t h,
+                                 std::uint64_t time,
+                                 std::uint32_t sensor_id) -> std::vector<std::uint8_t>
+{
+  writer wr("rgb_camera::update", 2 + 2 + 8 + 4 + (w * h * 3));
+
+  wr.write(&w, sizeof(w));
+  wr.write(&h, sizeof(h));
+  wr.write(&time, sizeof(time));
+  wr.write(&sensor_id, sizeof(sensor_id));
+  wr.write(data, w * h * 3);
+
+  return wr.complete();
+}
+
+auto
+writer::create_monochrome_camera_update(const std::uint8_t* data,
+                                        std::uint16_t w,
+                                        std::uint16_t h,
+                                        std::uint64_t time,
+                                        std::uint32_t sensor_id) -> std::vector<std::uint8_t>
+
+{
+  writer wr("monochrome_camera::update", 2 + 2 + 8 + 4 + (w * h));
+
+  wr.write(&w, sizeof(w));
+  wr.write(&h, sizeof(h));
+  wr.write(&time, sizeof(time));
+  wr.write(&sensor_id, sizeof(sensor_id));
+  wr.write(data, w * h);
+
+  return wr.complete();
+}
+
+auto
+writer::create_microphone_update(const std::uint16_t* data,
+                                 std::uint32_t size,
+                                 std::uint32_t sample_rate,
+                                 std::uint64_t time,
+                                 std::uint32_t sensor_id) -> std::vector<std::uint8_t>
+{
+  writer wr("microphone::update", size * 2 + sizeof(size) + sizeof(time) + sizeof(sample_rate) + 4);
+
+  wr.write(&sample_rate, sizeof(sample_rate));
+  wr.write(&size, sizeof(size));
+  wr.write(&time, sizeof(time));
+  wr.write(&sensor_id, sizeof(sensor_id));
+  wr.write(data, size * 2);
+
+  return wr.complete();
+}
+
+auto
+writer::create_temperature_update(float temperature, std::uint64_t time, std::uint32_t sensor_id)
+  -> std::vector<std::uint8_t>
+{
+  writer wr("temperature::update", sizeof(float) + sizeof(time) + 4);
+  wr.write(&temperature, sizeof(temperature));
+  wr.write(&time, sizeof(time));
+  wr.write(&sensor_id, sizeof(sensor_id));
+  return wr.complete();
+}
+
+auto
+writer::create_ready_update(std::uint64_t time) -> std::vector<std::uint8_t>
+{
+  writer wr("ready", sizeof(time));
+  wr.write(&time, sizeof(time));
+  return wr.complete();
+}
+
 } // namespace motion_monitor

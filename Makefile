@@ -1,16 +1,21 @@
 DOCKER ?= docker
+BASE ?= debian:11
 ARCH ?= arm64
 VERSION := 0.1
 TAG := motion_monitor_$(ARCH):$(VERSION)
 PLATFORM := linux/$(ARCH)
 
 .PHONY: all
-all:
-	$(DOCKER) buildx build . --platform $(PLATFORM) --tag $(TAG)
+all: build
 
-.PHONY: run
-run:
-	$(DOCKER) run --name motion_monitor --device /dev/video0:/dev/video0 --publish 5100:5100 -it $(TAG) --device 0 --ip 0.0.0.0
+.PHONY: build
+build:
+	$(DOCKER) run --name motion_monitor_builder --mount type=bind,source=$(PWD)/dist,destination=/home/user/dist -it $(TAG)
+	$(DOCKER) rm motion_monitor_builder
+
+.PHONY: builder
+builder:
+	$(DOCKER) buildx build . --platform $(PLATFORM) --tag $(TAG) --build-arg=BASE=${BASE}
 
 .PHONY: save
 save:

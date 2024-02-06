@@ -39,4 +39,67 @@ read(const std::uint8_t* data, const std::size_t size) -> read_result
   return result;
 }
 
+namespace {
+
+auto
+u16(const std::uint8_t* ptr) -> std::uint16_t
+{
+  return *reinterpret_cast<const std::uint16_t*>(ptr);
+}
+
+auto
+u32(const std::uint8_t* ptr) -> std::uint32_t
+{
+  return *reinterpret_cast<const std::uint32_t*>(ptr);
+}
+
+auto
+u64(const std::uint8_t* ptr) -> std::uint64_t
+{
+  return *reinterpret_cast<const std::uint64_t*>(ptr);
+}
+
+auto
+f32(const std::uint8_t* ptr) -> float
+{
+  return *reinterpret_cast<const float*>(ptr);
+}
+
+} // namespace
+
+auto
+decode_payload(const std::string& type, const void* payload, std::size_t payload_size, payload_visitor& visitor) -> bool
+{
+  const std::uint8_t* ptr = static_cast<const std::uint8_t*>(payload);
+
+  if (type == "rgb_camera::update") {
+    const auto w = u16(ptr);
+    const auto h = u16(ptr + 2);
+    const auto t = u64(ptr + 4);
+    const auto id = u32(ptr + 12);
+    visitor.visit_rgb_camera_update(ptr + 16, w, h, t, id);
+  } else if (type == "monochrome_camera::update") {
+    const auto w = u16(ptr);
+    const auto h = u16(ptr + 2);
+    const auto t = u64(ptr + 4);
+    const auto id = u32(ptr + 12);
+    visitor.visit_rgb_camera_update(ptr + 16, w, h, t, id);
+  } else if (type == "microphone::update") {
+    const auto r = u32(ptr);
+    const auto s = u32(ptr + 4);
+    const auto t = u64(ptr + 8);
+    const auto id = u32(ptr + 16);
+    visitor.visit_microphone_update(reinterpret_cast<const std::uint16_t*>(ptr + 20), s, r, t, id);
+  } else if (type == "temperature::update") {
+    const auto v = f32(ptr);
+    const auto t = u64(ptr + 4);
+    const auto id = u32(ptr + 12);
+    visitor.visit_temperature_update(v, t, id);
+  } else {
+    return visitor.visit_unknown_payload(type, payload, payload_size);
+  }
+
+  return true;
+}
+
 } // namespace motion_monitor

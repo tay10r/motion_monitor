@@ -4,27 +4,72 @@ project(motion_monitor)
 
 option(FAKE_VIDEO_DEVICE "Whether or not to fake the video device API." OFF)
 
+set(BUNDLE_PATH "" CACHE PATH "The path to the UI files that get bundled with the server.")
+
+set(BUILD_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS FALSE CACHE BOOL "" FORCE)
+
 if(NOT TARGET motion_monitor_proto)
   add_subdirectory(../proto proto)
 endif()
 
-find_package(spdlog REQUIRED)
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
 
-add_subdirectory(deps)
+include(FetchContent)
+
+FetchContent_Declare(llhttp URL "${CMAKE_CURRENT_SOURCE_DIR}/../deps/llhttp.zip")
+FetchContent_GetProperties(llhttp)
+
+if(NOT llhttp_POPULATED)
+
+  FetchContent_Populate(llhttp)
+
+  add_library(llhttp
+    ${llhttp_SOURCE_DIR}/include/llhttp.h
+    ${llhttp_SOURCE_DIR}/src/api.c
+    ${llhttp_SOURCE_DIR}/src/http.c
+    ${llhttp_SOURCE_DIR}/src/llhttp.c)
+
+  target_include_directories(llhttp
+    PUBLIC
+      "${llhttp_SOURCE_DIR}/include")
+
+  add_library(llhttp::llhttp ALIAS llhttp)
+
+endif()
+
+find_package(spdlog CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
+find_package(libuv CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(OpenCV REQUIRED)
+
+add_subdirectory(../deps deps)
+
+set(video_device src/fake_video_device.cpp)
 
 if(NOT FAKE_VIDEO_DEVICE)
-  find_package(OpenCV REQUIRED)
+  set(video_device src/video_device.cpp)
 endif()
 
 add_library(motion_monitor
   src/video_device.h
-  src/video_device.cpp
-  src/motion_filter.h
-  src/motion_filter.cpp
+  ${video_device}
+  src/detector.h
+  src/detector.cpp
+  src/http_server.h
+  src/http_server.cpp
   src/server.h
   src/server.cpp
   src/image.h
-  src/image.cpp)
+  src/image.cpp
+  src/config.h
+  src/config.cpp
+  src/camera_pipeline.h
+  src/camera_pipeline.cpp)
 
 if(FAKE_VIDEO_DEVICE)
   target_compile_definitions(motion_monitor PUBLIC FAKE_VIDEO_DEVICE=1)
@@ -33,9 +78,13 @@ endif()
 target_link_libraries(motion_monitor
   PUBLIC
     ${OpenCV_LIBS}
-    uv
+    $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
     spdlog::spdlog
-    motion_monitor_proto)
+    glm::glm
+    motion_monitor_proto
+    llhttp::llhttp
+    nlohmann_json::nlohmann_json
+    yaml-cpp::yaml-cpp)
 
 target_include_directories(motion_monitor
   PUBLIC
@@ -43,6 +92,22 @@ target_include_directories(motion_monitor
 
 add_executable(motion_monitor_cli
   main.cpp)
+
+if(BUNDLE_PATH)
+
+  target_compile_definitions(motion_monitor_cli PUBLIC WITH_BUNDLE=1)
+
+  include(CMakeRC.cmake)
+
+  cmrc_add_resource_library(motion_monitor_resources
+    "${BUNDLE_PATH}/dashboard.js"
+    "${BUNDLE_PATH}/dashboard.wasm"
+    "${BUNDLE_PATH}/index.html"
+    WHENCE "${BUNDLE_PATH}/")
+
+  target_link_libraries(motion_monitor_cli PUBLIC motion_monitor_resources)
+
+endif()
 
 target_link_libraries(motion_monitor_cli PUBLIC motion_monitor)
 
@@ -54,3 +119,7 @@ install(TARGETS motion_monitor_cli motion_monitor
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)
+
+set(CPACK_PACKAGE_CONTACT "Taylor Holberton")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6")
+include(CPack)

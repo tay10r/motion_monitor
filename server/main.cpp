@@ -1,14 +1,24 @@
+#include "src/camera_pipeline.h"
+#include "src/config.h"
+#include "src/http_server.h"
 #include "src/image.h"
-#include "src/motion_filter.h"
 #include "src/server.h"
 #include "src/video_device.h"
 
 #include <spdlog/spdlog.h>
 
 #include <iostream>
+#include <string>
+#include <vector>
 
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+
+#ifdef WITH_BUNDLE
+#include <cmrc/cmrc.hpp>
+CMRC_DECLARE(motion_monitor_resources);
+#endif
 
 namespace {
 
@@ -24,22 +34,43 @@ to_handle(uv_signal_t* handle) -> uv_handle_t*
   return reinterpret_cast<uv_handle_t*>(handle);
 }
 
-class program final
+#ifdef WITH_BUNDLE
+auto
+open_rc_file(const char* path) -> std::vector<std::uint8_t>
+{
+  const auto fs = cmrc::motion_monitor_resources::get_filesystem();
+
+  const auto file = fs.open(path);
+
+  std::vector<std::uint8_t> data;
+
+  data.resize(file.size());
+
+  std::memcpy(&data[0], file.begin(), file.size());
+
+  return data;
+}
+#endif /* WITH_BUNDLE */
+
+class program final : public camera_pipeline::observer
 {
 public:
   program()
   {
     uv_loop_init(&m_loop);
 
-    uv_handle_set_data(to_handle(&m_timer), this);
-    uv_timer_init(&m_loop, &m_timer);
-
     uv_handle_set_data(to_handle(&m_signal), this);
     uv_signal_init(&m_loop, &m_signal);
 
     m_server = server::create(&m_loop);
 
-    m_video_device = video_device::create();
+    m_http_server = http_server::create(&m_loop);
+
+#ifdef WITH_BUNDLE
+    m_http_server->add_file("/index.html", "text/html", open_rc_file("index.html"));
+    m_http_server->add_file("/dashboard.js", "text/javascript", open_rc_file("dashboard.js"));
+    m_http_server->add_file("/dashboard.wasm", "application/wasm", open_rc_file("dashboard.wasm"));
+#endif
   }
 
   program(const program&) = delete;
@@ -52,18 +83,28 @@ public:
 
   ~program() { uv_loop_close(&m_loop); }
 
-  void run(const char* ip, const int port, int device_index)
+  void run(const config& cfg)
   {
-    if (!m_video_device->open(device_index)) {
-      spdlog::error("Failed to open video capture device.");
-      return;
-    }
+    m_http_server->add_file("/config.json", "application/json", cfg.export_dashboard_config());
 
-    uv_timer_start(&m_timer, on_timer_expire, 0, 100);
+    for (const auto& camera_cfg : cfg.cameras) {
+
+      auto p = camera_pipeline::create(&m_loop, camera_cfg);
+
+      p->add_observer(this);
+
+      m_cameras.emplace_back(std::move(p));
+    }
 
     uv_signal_start(&m_signal, on_signal, SIGINT);
 
-    m_server->setup(ip, port);
+    if (cfg.tcp_server_enabled) {
+      m_server->setup(cfg.server_ip.c_str(), cfg.tcp_server_port);
+    }
+
+    if (cfg.http_server_enabled) {
+      m_http_server->setup(cfg.server_ip.c_str(), cfg.http_server_port);
+    }
 
     spdlog::info("Starting IO loop.");
 
@@ -84,34 +125,27 @@ protected:
     uv_stop(&self->m_loop);
   }
 
-  static void on_timer_expire(uv_timer_t* timer)
+  void on_image_update(const image& img, const std::uint32_t sensor_id, const float anomaly_level) override
   {
-    spdlog::debug("Capturing frame.");
+    spdlog::info("Publishing new image update.");
 
-    auto* self = get_self(to_handle(timer));
+    m_server->publish_frame(img, sensor_id, anomaly_level);
 
-    self->update_frame();
-  }
-
-  void update_frame()
-  {
-    m_current_frame = m_video_device->read_frame();
-
-    m_current_frame_id++;
-
-    const auto motion = m_motion_filter->filter(m_current_frame);
-
-    m_server->publish_frame(m_current_frame, motion);
+    m_http_server->publish_camera_update(img, sensor_id, anomaly_level);
   }
 
   void shutdown()
   {
     m_server->close();
 
-    uv_timer_stop(&m_timer);
-    uv_close(to_handle(&m_timer), nullptr);
+    m_http_server->close();
+
+    for (auto& cam : m_cameras) {
+      cam->close();
+    }
 
     uv_signal_stop(&m_signal);
+
     uv_close(to_handle(&m_signal), nullptr);
 
     uv_run(&m_loop, UV_RUN_DEFAULT);
@@ -120,26 +154,19 @@ protected:
 private:
   uv_loop_t m_loop{};
 
-  uv_timer_t m_timer{};
-
   uv_signal_t m_signal{};
-
-  std::unique_ptr<video_device> m_video_device;
 
   std::unique_ptr<server> m_server;
 
-  image m_current_frame;
+  std::unique_ptr<http_server> m_http_server;
 
-  std::size_t m_current_frame_id{};
-
-  std::unique_ptr<motion_filter> m_motion_filter{ motion_filter::create() };
+  std::vector<std::unique_ptr<camera_pipeline>> m_cameras;
 };
 
 const char help[] = R"(
 Options:
-  --ip        IP : Specifies the IP address to bind the TCP server to.
-  --port    PORT : The port to bind the TCP server to.
-  --device INDEX : The device index to capture video from.
+  --config PATH : Specifies the path to the configuration file.
+  --help        : The device index to capture video from.
 )";
 
 } // namespace
@@ -147,44 +174,24 @@ Options:
 int
 main(int argc, char** argv)
 {
-  std::string ip{ "127.0.0.1" };
+  config cfg;
 
   int port{ 5100 };
 
+  int http_port{ 8100 };
+
   int device_index{ 0 };
+
+  const char* config_path{ "config.yaml" };
 
   for (int i = 1; i < argc; i++) {
     const auto has_next = (i + 1) < argc;
-    if (std::strcmp(argv[i], "--ip") == 0) {
+    if (std::strcmp(argv[i], "--config") == 0) {
       if (!has_next) {
-        std::cerr << "Missing argument to IP argument." << std::endl;
+        std::cerr << "Missing path to '--config' argument." << std::endl;
         return EXIT_FAILURE;
       }
-      ip = argv[i + 1];
-      i++;
-    } else if (std::strcmp(argv[i], "--port") == 0) {
-      if (!has_next) {
-        std::cerr << "Missing argument to --port" << std::endl;
-        return EXIT_FAILURE;
-      }
-      char* endptr{ nullptr };
-      port = static_cast<int>(std::strtol(argv[i + 1], &endptr, 10));
-      if ((argv[i + 1] == endptr) || ((*endptr) != '\0')) {
-        std::cerr << "Invalid port '" << argv[i + 1] << "'." << std::endl;
-        return EXIT_FAILURE;
-      }
-      i++;
-    } else if (std::strcmp(argv[i], "--device") == 0) {
-      if (!has_next) {
-        std::cerr << "Missing argument to --device" << std::endl;
-        return EXIT_FAILURE;
-      }
-      char* endptr{ nullptr };
-      device_index = static_cast<int>(std::strtol(argv[i + 1], &endptr, 10));
-      if ((argv[i + 1] == endptr) || ((*endptr) != '\0')) {
-        std::cerr << "Invalid device '" << argv[i + 1] << "'." << std::endl;
-        return EXIT_FAILURE;
-      }
+      config_path = argv[i + 1];
       i++;
     } else if (std::strcmp(argv[i], "--help") == 0) {
       std::cerr << "Usage: " << argv[i] << " [options]" << std::endl;
@@ -196,10 +203,12 @@ main(int argc, char** argv)
     }
   }
 
+  cfg.load(config_path);
+
   {
     auto prg = std::make_unique<program>();
 
-    prg->run(ip.c_str(), port, device_index);
+    prg->run(cfg);
   }
 
   return EXIT_SUCCESS;

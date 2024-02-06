@@ -1,3 +1,9 @@
 build
+emscripten-build
 .cache
 *.tar
+*.png
+*.onnx
+*.deb
+__pycache__
+venv

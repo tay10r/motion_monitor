@@ -1,0 +1,32 @@
+# The IPv4 address to bind the TCP and/or HTTP server to.
+#
+# server_ip: '127.0.0.1'
+
+# Whether or not to enable the TCP server.
+#
+# tcp_server_enabled: true
+
+# The port to bind the TCP server to.
+#
+# tcp_server_port: 5100
+
+# The port to bind the HTTP server to.
+#
+# http_server_port: 8100
+
+# Whether or not to enable th HTTP server.
+#
+# http_server_enabled: true
+
+cameras:
+  - name: 'Crib Camera'
+
+    device_index: 0
+
+    # The number of milliseconds between frame grabs.
+    #
+    # read_interval: 1000
+
+    # Path to the ONNX model containing the detector.
+    #
+    # detector_path: ''

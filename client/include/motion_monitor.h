@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include <cstddef>
 #include <cstdint>
@@ -32,7 +33,7 @@ public:
 
   virtual void on_connection_closed() = 0;
 
-  virtual void on_image(std::size_t w, std::size_t h, std::size_t c, const std::uint8_t* data) = 0;
+  virtual void on_payload(const std::string& type, const void* payload, std::size_t payload_size) = 0;
 };
 
 class connection
@@ -49,6 +50,24 @@ public:
   virtual void connect(const char* ip, int port) = 0;
 
   virtual void close() = 0;
+
+  /**
+   * @brief Sets whether or not to stream data from the server.
+   *
+   * @details By default, the connection class will automatically notify the server that the client is ready for data
+   * whenever the observer class returns from its call. This can be disabled in order to manually control when the
+   * server is allowed to send data again.
+   *
+   * @note This is on by default.
+   * */
+  virtual void set_streaming_enabled(bool enabled) = 0;
+
+  /**
+   * @brief Notifies the server that the client is ready for more data.
+   *
+   * @note This only has to be called if streaming is disabled.
+   * */
+  virtual void notify_ready() = 0;
 };
 
 } // namespace motion_monitor

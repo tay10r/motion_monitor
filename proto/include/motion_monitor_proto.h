@@ -89,7 +89,7 @@ public:
                                               std::uint64_t time,
                                               std::uint32_t sensor_id) = 0;
 
-  virtual void visit_microphone_update(const std::uint16_t* data,
+  virtual void visit_microphone_update(const std::int16_t* data,
                                        std::uint32_t size,
                                        std::uint32_t sample_rate,
                                        std::uint64_t time,
@@ -141,7 +141,7 @@ public:
                                               std::uint64_t time,
                                               std::uint32_t sensor_id) -> std::vector<std::uint8_t>;
 
-  static auto create_microphone_update(const std::uint16_t* data,
+  static auto create_microphone_update(const std::int16_t* data,
                                        std::uint32_t size,
                                        std::uint32_t sample_rate,
                                        std::uint64_t time,

@@ -85,13 +85,13 @@ writer::create_monochrome_camera_update(const std::uint8_t* data,
 }
 
 auto
-writer::create_microphone_update(const std::uint16_t* data,
+writer::create_microphone_update(const std::int16_t* data,
                                  std::uint32_t size,
                                  std::uint32_t sample_rate,
                                  std::uint64_t time,
                                  std::uint32_t sensor_id) -> std::vector<std::uint8_t>
 {
-  writer wr("microphone::update", size * 2 + sizeof(size) + sizeof(time) + sizeof(sample_rate) + 4);
+  writer wr("microphone::update", size * 2 + sizeof(size) + sizeof(time) + sizeof(sample_rate) + sizeof(sensor_id));
 
   wr.write(&sample_rate, sizeof(sample_rate));
   wr.write(&size, sizeof(size));

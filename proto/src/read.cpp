@@ -89,7 +89,7 @@ decode_payload(const std::string& type, const void* payload, std::size_t payload
     const auto s = u32(ptr + 4);
     const auto t = u64(ptr + 8);
     const auto id = u32(ptr + 16);
-    visitor.visit_microphone_update(reinterpret_cast<const std::uint16_t*>(ptr + 20), s, r, t, id);
+    visitor.visit_microphone_update(reinterpret_cast<const std::int16_t*>(ptr + 20), s, r, t, id);
   } else if (type == "temperature::update") {
     const auto v = f32(ptr);
     const auto t = u64(ptr + 4);

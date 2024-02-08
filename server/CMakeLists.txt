@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.14.7)
 project(motion_monitor)
 
 option(FAKE_VIDEO_DEVICE "Whether or not to fake the video device API." OFF)
+option(ENABLE_TESTING "Whether or not to build the tests." OFF)
+option(ENABLE_AUDIO "Whether or not to include audio support." ON)
 
 set(BUNDLE_PATH "" CACHE PATH "The path to the UI files that get bundled with the server.")
 
@@ -49,15 +51,7 @@ find_package(OpenCV REQUIRED)
 
 add_subdirectory(../deps deps)
 
-set(video_device src/fake_video_device.cpp)
-
-if(NOT FAKE_VIDEO_DEVICE)
-  set(video_device src/video_device.cpp)
-endif()
-
-add_library(motion_monitor
-  src/video_device.h
-  ${video_device}
+set(sources
   src/detector.h
   src/detector.cpp
   src/http_server.h
@@ -68,8 +62,31 @@ add_library(motion_monitor
   src/image.cpp
   src/config.h
   src/config.cpp
+  src/pipeline.h
+  src/pipeline_runner.h
+  src/pipeline_runner.cpp
+  src/video_device.h
   src/camera_pipeline.h
   src/camera_pipeline.cpp)
+
+if(ENABLE_AUDIO)
+  list(APPEND sources
+    src/microphone_device.h
+    src/microphone_device.cpp
+    src/microphone_pipeline.h
+    src/microphone_pipeline.cpp)
+endif()
+
+set(video_device src/fake_video_device.cpp)
+
+if(NOT FAKE_VIDEO_DEVICE)
+  list(APPEND sources src/video_device.cpp)
+else()
+  list(APPEND sources
+    src/video_device.cpp)
+endif()
+
+add_library(motion_monitor ${sources})
 
 if(FAKE_VIDEO_DEVICE)
   target_compile_definitions(motion_monitor PUBLIC FAKE_VIDEO_DEVICE=1)
@@ -89,6 +106,11 @@ target_link_libraries(motion_monitor
 target_include_directories(motion_monitor
   PUBLIC
     ${OpenCV_INCLUDE_DIRS})
+
+if(ENABLE_AUDIO)
+  find_package(ALSA REQUIRED)
+  target_link_libraries(motion_monitor PUBLIC ALSA::ALSA)
+endif()
 
 add_executable(motion_monitor_cli
   main.cpp)
@@ -123,3 +145,12 @@ install(TARGETS motion_monitor_cli motion_monitor
 set(CPACK_PACKAGE_CONTACT "Taylor Holberton")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6")
 include(CPack)
+
+if(ENABLE_TESTING)
+  find_package(GTest CONFIG REQUIRED)
+  add_executable(motion_monitor_tests
+    tests/test_config_validation.cpp
+    tests/test_pipeline_runner.cpp)
+  target_link_libraries(motion_monitor_tests PUBLIC motion_monitor GTest::gtest GTest::gtest_main)
+  enable_testing()
+endif()

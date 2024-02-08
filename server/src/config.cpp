@@ -4,6 +4,10 @@
 
 #include <nlohmann/json.hpp>
 
+#include <set>
+#include <sstream>
+#include <stdexcept>
+
 namespace {
 
 auto
@@ -37,41 +41,74 @@ load_ui_config(const YAML::Node& root) -> config::ui_config
   return cfg;
 }
 
+void
+load_microphones(const YAML::Node& root, config& cfg)
+{
+  for (const auto& node : root["microphones"]) {
+
+    config::microphone_config mic;
+
+    mic.name = node["name"].as<std::string>();
+
+    mic.sensor_id = node["sensor_id"].as<std::uint32_t>();
+
+    cfg.microphones.emplace_back(std::move(mic));
+  }
+}
+
+void
+load_impl(const YAML::Node& root, config& cfg)
+{
+  cfg.server_ip = root["server_ip"].as<std::string>(cfg.server_ip);
+
+  cfg.tcp_server_enabled = root["tcp_server_enabled"].as<bool>(cfg.tcp_server_enabled);
+
+  cfg.tcp_server_port = root["tcp_server_port"].as<int>(cfg.tcp_server_port);
+
+  cfg.http_server_enabled = root["http_server_enabled"].as<bool>(cfg.http_server_enabled);
+
+  cfg.http_server_port = root["http_server_port"].as<int>(cfg.http_server_port);
+
+  for (const auto& node : root["cameras"]) {
+
+    config::camera_config cam_cfg;
+    cam_cfg.device_index = node["device_index"].as<int>();
+    cam_cfg.name = node["name"].as<std::string>();
+    cam_cfg.read_interval = node["read_interval"].as<int>(1000);
+    cam_cfg.detector_path = node["detector_path"].as<std::string>("");
+
+    cfg.cameras.emplace_back(std::move(cam_cfg));
+  }
+
+  load_microphones(root, cfg);
+
+  if (root["landscape_ui"]) {
+    cfg.landscape_ui = load_ui_config(root["landscape_ui"]);
+  }
+
+  if (root["portrait_ui"].IsDefined()) {
+    cfg.portrait_ui = load_ui_config(root["portait_ui"]);
+  } else {
+    cfg.portrait_ui = cfg.landscape_ui;
+  }
+}
+
 } // namespace
+
+void
+config::load_string(const char* str)
+{
+  const auto root = YAML::Load(str);
+
+  load_impl(root, *this);
+}
 
 void
 config::load(const char* path)
 {
   const auto root = YAML::LoadFile(path);
 
-  server_ip = root["server_ip"].as<std::string>(server_ip);
-
-  tcp_server_enabled = root["tcp_server_enabled"].as<bool>(tcp_server_enabled);
-
-  tcp_server_port = root["tcp_server_port"].as<int>(tcp_server_port);
-
-  http_server_enabled = root["http_server_enabled"].as<bool>(http_server_enabled);
-
-  http_server_port = root["http_server_port"].as<int>(http_server_port);
-
-  for (const auto& node : root["cameras"]) {
-
-    camera_config cfg;
-    cfg.device_index = node["device_index"].as<int>();
-    cfg.name = node["name"].as<std::string>();
-    cfg.read_interval = node["read_interval"].as<int>(1000);
-    cfg.detector_path = node["detector_path"].as<std::string>("");
-
-    cameras.emplace_back(std::move(cfg));
-  }
-
-  landscape_ui = load_ui_config(root["landscape_ui"]);
-
-  if (root["portrait_ui"].IsDefined()) {
-    portrait_ui = load_ui_config(root["portait_ui"]);
-  } else {
-    portrait_ui = landscape_ui;
-  }
+  load_impl(root, *this);
 }
 
 namespace {
@@ -135,3 +172,40 @@ config::export_dashboard_config() const -> std::string
 
   return root.dump();
 }
+
+namespace {
+
+template<typename Item, typename Accessor>
+void
+check_unique_names(const std::vector<Item>& items, Accessor accessor)
+{
+  std::vector<std::string> names;
+
+  for (const auto& it : items) {
+    names.emplace_back(accessor(it));
+  }
+
+  std::set<std::string> unique_names;
+
+  for (const auto& name : names) {
+
+    if (unique_names.find(name) != unique_names.end()) {
+      std::ostringstream stream;
+      stream << "The name '" << name << "' is already used.";
+      throw std::runtime_error(stream.str());
+    }
+
+    unique_names.emplace(name);
+  }
+}
+
+} // namespace
+
+void
+config::validate() const
+{
+  check_unique_names(cameras, [](const camera_config& cfg) -> std::string { return cfg.name; });
+
+  check_unique_names(microphones, [](const microphone_config& cfg) -> std::string { return cfg.name; });
+}
+

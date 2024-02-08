@@ -39,7 +39,17 @@ public:
 class connection
 {
 public:
-  static auto create(uv_loop_t* loop) -> std::unique_ptr<connection>;
+  /**
+   * @brief Creates a new connection instance.
+   *
+   * @param loop The loop to construct the asynchronous objects on.
+   *
+   * @param interrupt_handling Whether or not to handle interrupt signals. If this is enabled, the loop will be stopped
+   * when an interrupt signal is caught.
+   *
+   * @return A new connection instance.
+   * */
+  static auto create(uv_loop_t* loop, bool interrupt_handling) -> std::unique_ptr<connection>;
 
   connection() = default;
 
@@ -68,6 +78,13 @@ public:
    * @note This only has to be called if streaming is disabled.
    * */
   virtual void notify_ready() = 0;
+
+  /**
+   * @brief Indicates whether or not an interrupt signal was note.
+   *
+   * @note When interrupt handling is disabled, this function always returns false.
+   * */
+  virtual auto caught_interrupt() const -> bool = 0;
 };
 
 } // namespace motion_monitor

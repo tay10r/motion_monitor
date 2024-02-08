@@ -3,11 +3,12 @@
 
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 
 #include <cstdlib>
 
-#include <stb_image_write.h>
+#include "tinywav.h"
 
 namespace {
 
@@ -16,9 +17,8 @@ class observer_impl final
   , public motion_monitor::payload_visitor
 {
 public:
-  explicit observer_impl(motion_monitor::connection* conn, const int num_frames)
+  explicit observer_impl(motion_monitor::connection* conn)
     : m_connection(conn)
-    , m_max_frames(num_frames)
   {
   }
 
@@ -52,17 +52,6 @@ public:
                                const std::uint64_t time,
                                const std::uint32_t sensor_id) override
   {
-    std::cout << "on image" << std::endl;
-
-    std::ostringstream path_stream;
-    path_stream << std::setw(8) << std::setfill('0') << m_frame_counter << ".png";
-    const auto path = path_stream.str();
-
-    std::cout << "saving frame '" << path << "'" << std::endl;
-
-    stbi_write_png(path.c_str(), w, h, 3, data, w * 3);
-
-    m_frame_counter++;
   }
 
   void visit_microphone_update(const std::int16_t* data,
@@ -71,13 +60,19 @@ public:
                                const std::uint64_t time,
                                const std::uint32_t sensor_id) override
   {
+    m_sample_rate = sample_rate;
+
+    for (std::uint32_t i = 0; i < size; i++) {
+
+      const float v = static_cast<float>(data[i]) / static_cast<float>(std::numeric_limits<std::int16_t>::max());
+
+      m_samples.emplace_back(v);
+    }
+
+    std::cout << "received audio (samples=" << m_samples.size() << ")" << std::endl;
   }
 
-  void visit_temperature_update(const float temperature,
-                                const std::uint64_t time,
-                                const std::uint32_t sensor_id) override
-  {
-  }
+  void visit_temperature_update(const float temperature, const std::uint64_t time, const std::uint32_t) override {}
 
   auto visit_unknown_payload(const std::string& type, const void* payload, const std::size_t payload_size)
     -> bool override
@@ -88,27 +83,24 @@ public:
 
   void next_frame() { m_connection->notify_ready(); }
 
-  auto done() const -> bool { return m_frame_counter >= m_max_frames; }
+  void save_wav(const char* filename)
+  {
+    TinyWav file;
+
+    tinywav_open_write(&file, 1, m_sample_rate, TW_INT16, TW_INLINE, filename);
+
+    tinywav_write_f(&file, &m_samples[0], m_samples.size());
+
+    tinywav_close_write(&file);
+  }
 
 private:
   motion_monitor::connection* m_connection{ nullptr };
 
-  int m_frame_counter{ 0 };
+  std::vector<float> m_samples;
 
-  int m_max_frames{ 1 };
+  std::uint32_t m_sample_rate{};
 };
-
-void
-on_timer_expire(uv_timer_t* timer)
-{
-  auto* observer = static_cast<observer_impl*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(timer)));
-
-  if (observer->done()) {
-    uv_stop(uv_handle_get_loop(reinterpret_cast<uv_handle_t*>(timer)));
-  } else {
-    observer->next_frame();
-  }
-}
 
 } // namespace
 
@@ -117,43 +109,23 @@ main(int argc, char** argv)
 {
   const char* ip = "127.0.0.1";
 
-  int interval{ 60'000 };
-
-  int num_frames{ 1 };
-
   if (argc > 1) {
     ip = argv[1];
-  }
-
-  if (argc > 2) {
-    interval = std::atoi(argv[2]);
-  }
-
-  if (argc > 3) {
-    num_frames = std::atoi(argv[3]);
   }
 
   uv_loop_t loop{};
 
   uv_loop_init(&loop);
 
-  uv_timer_t timer{};
-
-  uv_timer_init(&loop, &timer);
-
-  uv_timer_start(&timer, on_timer_expire, 0, interval);
-
   auto connection = motion_monitor::connection::create(&loop, /* handle interrupt */ true);
 
-  connection->set_streaming_enabled(false);
-
-  observer_impl obs(connection.get(), num_frames);
-
-  uv_handle_set_data(reinterpret_cast<uv_handle_t*>(&timer), &obs);
+  observer_impl obs(connection.get());
 
   connection->add_observer(&obs);
 
   connection->connect(ip, 5100);
+
+  connection->notify_ready();
 
   uv_run(&loop, UV_RUN_DEFAULT);
 
@@ -161,11 +133,11 @@ main(int argc, char** argv)
 
   connection->close();
 
-  uv_close(reinterpret_cast<uv_handle_t*>(&timer), nullptr);
-
   uv_run(&loop, UV_RUN_DEFAULT);
 
   uv_loop_close(&loop);
+
+  obs.save_wav("audio.wav");
 
   return EXIT_SUCCESS;
 }

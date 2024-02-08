@@ -2,6 +2,8 @@
 #include "src/config.h"
 #include "src/http_server.h"
 #include "src/image.h"
+#include "src/microphone_pipeline.h"
+#include "src/pipeline_runner.h"
 #include "src/server.h"
 #include "src/video_device.h"
 
@@ -52,7 +54,9 @@ open_rc_file(const char* path) -> std::vector<std::uint8_t>
 }
 #endif /* WITH_BUNDLE */
 
-class program final : public camera_pipeline::observer
+class program final
+  : public camera_pipeline::observer
+  , public telemetry_observer
 {
 public:
   program()
@@ -96,6 +100,17 @@ public:
       m_cameras.emplace_back(std::move(p));
     }
 
+    for (const auto& microphone_cfg : cfg.microphones) {
+
+      auto p = microphone_pipeline::create(microphone_cfg);
+
+      auto runner = std::make_unique<pipeline_runner>(&m_loop, std::move(p));
+
+      runner->add_telemetry_observer(this);
+
+      m_pipeline_runners.emplace_back(std::move(runner));
+    }
+
     uv_signal_start(&m_signal, on_signal, SIGINT);
 
     if (cfg.tcp_server_enabled) {
@@ -125,6 +140,13 @@ protected:
     uv_stop(&self->m_loop);
   }
 
+  void observe_telemetry(const std::uint8_t* data, const std::size_t size) override
+  {
+    spdlog::info("got telemetry.");
+
+    m_server->publish_telemetry(data, size);
+  }
+
   void on_image_update(const image& img, const std::uint32_t sensor_id, const float anomaly_level) override
   {
     spdlog::info("Publishing new image update.");
@@ -148,6 +170,10 @@ protected:
 
     uv_close(to_handle(&m_signal), nullptr);
 
+    for (auto& r : m_pipeline_runners) {
+      r->close();
+    }
+
     uv_run(&m_loop, UV_RUN_DEFAULT);
   }
 
@@ -161,6 +187,10 @@ private:
   std::unique_ptr<http_server> m_http_server;
 
   std::vector<std::unique_ptr<camera_pipeline>> m_cameras;
+
+  std::vector<std::unique_ptr<microphone_pipeline>> m_microphones;
+
+  std::vector<std::unique_ptr<pipeline_runner>> m_pipeline_runners;
 };
 
 const char help[] = R"(
@@ -204,6 +234,13 @@ main(int argc, char** argv)
   }
 
   cfg.load(config_path);
+
+  try {
+    cfg.validate();
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
   {
     auto prg = std::make_unique<program>();

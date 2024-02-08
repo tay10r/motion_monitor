@@ -35,6 +35,12 @@ to_handle(uv_write_t* handle) -> uv_handle_t*
   return reinterpret_cast<uv_handle_t*>(handle);
 }
 
+auto
+to_handle(uv_signal_t* handle) -> uv_handle_t*
+{
+  return reinterpret_cast<uv_handle_t*>(handle);
+}
+
 class write_operation final
 {
 public:
@@ -92,11 +98,20 @@ private:
 class connection_impl final : public connection
 {
 public:
-  connection_impl(uv_loop_t* loop)
+  connection_impl(uv_loop_t* loop, bool interrupt_handling)
   {
     uv_handle_set_data(to_handle(&m_socket), this);
 
     uv_tcp_init(loop, &m_socket);
+
+    uv_handle_set_data(to_handle(&m_signal_handler), this);
+
+    uv_signal_init(loop, &m_signal_handler);
+
+    if (interrupt_handling) {
+
+      uv_signal_start(&m_signal_handler, on_interrupt, SIGINT);
+    }
   }
 
   ~connection_impl() { assert(m_closed == true); }
@@ -136,6 +151,8 @@ public:
 
     uv_close(to_handle(&m_socket), on_close);
 
+    uv_close(to_handle(&m_signal_handler), nullptr);
+
     m_closed = true;
   }
 
@@ -150,10 +167,28 @@ public:
 
   void set_streaming_enabled(const bool enabled) override { m_streaming_enabled = enabled; }
 
+  auto caught_interrupt() const -> bool override { return m_caught_interrupt; }
+
 protected:
   static auto get_self(uv_handle_t* handle) -> connection_impl*
   {
     return static_cast<connection_impl*>(uv_handle_get_data(handle));
+  }
+
+  static void on_interrupt(uv_signal_t* signal, int signum)
+  {
+    auto* handle = to_handle(signal);
+
+    auto* loop = uv_handle_get_loop(handle);
+
+    auto* self = get_self(handle);
+
+    if (signum == SIGINT) {
+
+      self->m_caught_interrupt = true;
+
+      uv_stop(loop);
+    }
   }
 
   static void on_close(uv_handle_t* handle)
@@ -249,7 +284,9 @@ protected:
   }
 
 private:
-  uv_tcp_t m_socket;
+  uv_tcp_t m_socket{};
+
+  uv_signal_t m_signal_handler{};
 
   std::vector<observer*> m_observers;
 
@@ -262,14 +299,16 @@ private:
   std::size_t m_read_size{ 0 };
 
   bool m_streaming_enabled{ true };
+
+  bool m_caught_interrupt{ false };
 };
 
 } // namespace
 
 auto
-connection::create(uv_loop_t* loop) -> std::unique_ptr<connection>
+connection::create(uv_loop_t* loop, bool interrupt_handling) -> std::unique_ptr<connection>
 {
-  return std::make_unique<connection_impl>(loop);
+  return std::make_unique<connection_impl>(loop, interrupt_handling);
 }
 
 } // namespace motion_monitor

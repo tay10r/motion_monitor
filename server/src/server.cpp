@@ -85,6 +85,19 @@ public:
     m_ready = false;
   }
 
+  void publish_telemetry(const void* data, std::size_t size)
+  {
+    if (!m_ready) {
+      return;
+    }
+
+    const auto* ptr = static_cast<const std::uint8_t*>(data);
+
+    std::vector<std::uint8_t> copy(ptr, ptr + size);
+
+    write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), std::move(copy), nullptr, nullptr);
+  }
+
 protected:
   static auto get_self(uv_handle_t* handle) -> client* { return static_cast<client*>(uv_handle_get_data(handle)); }
 
@@ -220,6 +233,13 @@ public:
   {
     for (auto& c : m_clients) {
       c->publish_frame(img, sensor_id, anomaly_level);
+    }
+  }
+
+  void publish_telemetry(const void* data, std::size_t size) override
+  {
+    for (auto& c : m_clients) {
+      c->publish_telemetry(data, size);
     }
   }
 

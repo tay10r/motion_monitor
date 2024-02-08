@@ -4,6 +4,8 @@ project(motion_monitor_client)
 
 option(MOTION_MONITOR_DEMO "Whether or not to build the demo app." ON)
 
+find_package(libuv CONFIG REQUIRED)
+
 if(NOT TARGET motion_monitor_proto)
   add_subdirectory(../proto proto)
 endif()
@@ -18,7 +20,7 @@ target_include_directories(motion_monitor_client
 
 target_link_libraries(motion_monitor_client
   PUBLIC
-    uv
+    $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
     motion_monitor_proto)
 
 if(MOTION_MONITOR_DEMO)
@@ -47,7 +49,13 @@ if(MOTION_MONITOR_DEMO)
 
   add_demo(minimal demo/minimal/main.cpp)
 
+  add_demo(capture_audio
+    demo/capture_audio/main.cpp
+    demo/capture_audio/tinywav.h
+    demo/capture_audio/tinywav.c)
+
   add_demo(capture demo/capture/main.cpp)
+
   target_link_libraries(motion_monitor_demo_capture PUBLIC stb)
 
 endif()

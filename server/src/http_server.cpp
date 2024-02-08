@@ -245,7 +245,14 @@ public:
     uv_handle_set_data(to_handle(&m_server), this);
   }
 
-  void close() override { uv_close(to_handle(&m_server), nullptr); }
+  void close() override
+  {
+    uv_close(to_handle(&m_server), nullptr);
+
+    for (auto& c : m_clients) {
+      c->close();
+    }
+  }
 
   auto setup(const char* ip, int port) -> bool override
   {
@@ -308,6 +315,8 @@ protected:
         return;
       }
     }
+
+    spdlog::info("Closed HTTP client connection.");
   }
 
   static void on_connect(uv_stream_t* server, int status)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -35,6 +36,24 @@ struct config final
     std::string detector_path;
   };
 
+  struct microphone_config final
+  {
+    /**
+     * @brief The name of the device (which must be unique).
+     * */
+    std::string name;
+
+    /**
+     * @brief The unique ID assigned to this microphone.
+     * */
+    std::uint32_t sensor_id{};
+
+    /**
+     * @brief The sampling rate of the audio.
+     * */
+    unsigned int rate{ 44100 };
+  };
+
   struct widget_config
   {
     std::string label;
@@ -64,6 +83,8 @@ struct config final
 
   std::vector<camera_config> cameras;
 
+  std::vector<microphone_config> microphones;
+
   std::string server_ip{ "127.0.0.1" };
 
   int tcp_server_port{ 5100 };
@@ -79,6 +100,15 @@ struct config final
   ui_config portrait_ui;
 
   void load(const char* path);
+
+  void load_string(const char* str);
+
+  /**
+   * @brief Validates the configuration.
+   *
+   * @note An exception is thrown if the configuration contains an error.
+   * */
+  void validate() const;
 
   auto export_dashboard_config() const -> std::string;
 };

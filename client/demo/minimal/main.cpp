@@ -32,7 +32,7 @@ main()
 
   uv_loop_init(&loop);
 
-  auto connection = motion_monitor::connection::create(&loop);
+  auto connection = motion_monitor::connection::create(&loop, /* handle interrupt */ true);
 
   observer_impl obs;
 

@@ -67,6 +67,8 @@ set(sources
   src/pipeline_runner.h
   src/pipeline_runner.cpp
   src/video_device.h
+  src/video_pipeline.h
+  src/video_pipeline.cpp
   src/camera_pipeline.h
   src/camera_pipeline.cpp)
 

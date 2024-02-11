@@ -280,7 +280,7 @@ public:
    *
    * @note The caller should clear the queue after calling this function, in most circumstances.
    * */
-  auto aggregate() const -> std::vector<std::uint8_t>;
+  auto aggregate() const -> std::shared_ptr<outbound_message>;
 
 protected:
   using map_type = std::map<std::size_t, std::vector<std::shared_ptr<outbound_message>>>;

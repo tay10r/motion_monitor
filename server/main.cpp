@@ -2,10 +2,12 @@
 #include "src/config.h"
 #include "src/http_server.h"
 #include "src/image.h"
-#include "src/microphone_pipeline.h"
 #include "src/pipeline_runner.h"
 #include "src/server.h"
 #include "src/video_device.h"
+
+#include "src/microphone_pipeline.h"
+#include "src/video_pipeline.h"
 
 #include <spdlog/spdlog.h>
 
@@ -54,9 +56,7 @@ open_rc_file(const char* path) -> std::vector<std::uint8_t>
 }
 #endif /* WITH_BUNDLE */
 
-class program final
-  : public camera_pipeline::observer
-  , public telemetry_observer
+class program final : public telemetry_observer
 {
 public:
   program()
@@ -93,11 +93,13 @@ public:
 
     for (const auto& camera_cfg : cfg.cameras) {
 
-      auto p = camera_pipeline::create(&m_loop, camera_cfg);
+      auto p = video_pipeline::create(camera_cfg);
 
-      p->add_observer(this);
+      auto runner = std::make_unique<pipeline_runner>(&m_loop, std::move(p));
 
-      m_cameras.emplace_back(std::move(p));
+      runner->add_telemetry_observer(this);
+
+      m_pipeline_runners.emplace_back(std::move(runner));
     }
 
     for (const auto& microphone_cfg : cfg.microphones) {
@@ -147,24 +149,11 @@ protected:
     m_http_server->publish_telemetry(msg);
   }
 
-  void on_image_update(const image& img, const std::uint32_t sensor_id, const float anomaly_level) override
-  {
-    spdlog::info("Publishing new image update.");
-
-    m_server->publish_frame(img, sensor_id, anomaly_level);
-
-    m_http_server->publish_camera_update(img, sensor_id, anomaly_level);
-  }
-
   void shutdown()
   {
     m_server->close();
 
     m_http_server->close();
-
-    for (auto& cam : m_cameras) {
-      cam->close();
-    }
 
     uv_signal_stop(&m_signal);
 
@@ -185,10 +174,6 @@ private:
   std::unique_ptr<server> m_server;
 
   std::unique_ptr<http_server> m_http_server;
-
-  std::vector<std::unique_ptr<camera_pipeline>> m_cameras;
-
-  std::vector<std::unique_ptr<microphone_pipeline>> m_microphones;
 
   std::vector<std::unique_ptr<pipeline_runner>> m_pipeline_runners;
 };

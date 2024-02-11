@@ -41,6 +41,7 @@ public:
 
   explicit http_client(uv_loop_t* loop, const resource_map* resources)
     : m_resources(resources)
+    , m_telemetry_queue(2)
   {
     uv_tcp_init(loop, &m_socket);
 
@@ -83,13 +84,7 @@ public:
     }
   }
 
-  void set_latest_update(std::shared_ptr<sentinel::proto::outbound_message> msg, const float anomaly_level)
-  {
-    /* TODO : use anomaly level */
-    m_latest_update = msg;
-  }
-
-  void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) { m_latest_update = msg; }
+  void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) { m_telemetry_queue.add(msg); }
 
 protected:
   static auto get_self(uv_handle_t* handle) -> http_client*
@@ -169,8 +164,6 @@ protected:
 
   void handle_get_request()
   {
-    spdlog::info("Received GET request for '{}'.", m_request.url);
-
     std::string url = m_request.url;
 
     if (url == "/") {
@@ -210,19 +203,23 @@ protected:
     std::memcpy(&out[0], header.data(), header.size());
     std::memcpy(&out[header.size()], content.data(), content.size());
 
-    spdlog::info("Transfering payload of size: {}, HTTP response size: {}", content.size(), out.size());
-
     write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), std::move(out), nullptr, nullptr);
   }
 
-  auto get_latest_update() const -> const std::vector<std::uint8_t>&
+  auto get_latest_update() -> std::vector<std::uint8_t>
   {
-    if (!m_latest_update) {
+    if (m_telemetry_queue.empty()) {
+
       static const std::vector<std::uint8_t> empty_response;
+
       return empty_response;
     }
 
-    return *m_latest_update->buffer;
+    auto buf = m_telemetry_queue.aggregate()->buffer;
+
+    m_telemetry_queue.clear();
+
+    return std::move(*buf);
   }
 
 private:
@@ -240,7 +237,7 @@ private:
 
   request m_request;
 
-  std::shared_ptr<sentinel::proto::outbound_message> m_latest_update{ nullptr };
+  sentinel::proto::queue m_telemetry_queue;
 
   const resource_map* m_resources{ nullptr };
 };
@@ -293,22 +290,6 @@ public:
     m_resources.emplace(std::move(path), resource{ std::move(content_type), std::move(data) });
   }
 
-  void publish_camera_update(const image& img, const std::uint32_t sensor_id, const float anomaly_level) override
-  {
-    using namespace std::chrono;
-
-    const auto ts = time_point_cast<microseconds>(system_clock::now()).time_since_epoch().count();
-
-    m_latest_update =
-      sentinel::proto::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
-
-    m_anomaly_level = anomaly_level;
-
-    for (auto& c : m_clients) {
-      c->set_latest_update(m_latest_update, anomaly_level);
-    }
-  }
-
   void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) override
   {
     for (auto& c : m_clients) {
@@ -354,8 +335,6 @@ protected:
     c->accept(server);
 
     c->register_close_callback(self, on_client_close);
-
-    c->set_latest_update(self->m_latest_update, self->m_anomaly_level);
 
     c->start_reading();
 

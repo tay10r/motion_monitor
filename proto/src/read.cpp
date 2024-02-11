@@ -95,6 +95,18 @@ decode_payload(const std::string& type, const void* payload, std::size_t payload
     const auto t = u64(ptr + 4);
     const auto id = u32(ptr + 12);
     visitor.visit_temperature_update(v, t, id);
+  } else if (type == "aggregate") {
+    for (std::size_t i = 0; i < payload_size;) {
+      const auto res = read(ptr + i, payload_size - i);
+      if (!res.payload_ready) {
+        break;
+      }
+      const auto sub_ptr = static_cast<const std::uint8_t*>(payload) + i + res.payload_offset;
+      if (!decode_payload(res.type_id, sub_ptr, res.payload_size, visitor)) {
+        break;
+      }
+      i += res.payload_offset + res.payload_size;
+    }
   } else {
     return visitor.visit_unknown_payload(type, payload, payload_size);
   }

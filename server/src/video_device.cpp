@@ -75,6 +75,7 @@ protected:
 
 private:
   cv::VideoCapture m_handle;
+
   std::mt19937 m_rng{ 0 };
 };
 

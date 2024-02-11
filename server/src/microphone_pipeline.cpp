@@ -1,8 +1,9 @@
 #include "microphone_pipeline.h"
 
+#include "clock.h"
 #include "microphone_device.h"
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 namespace {
 
@@ -14,7 +15,7 @@ public:
   {
   }
 
-  auto loop(bool& should_close) -> std::vector<std::vector<std::uint8_t>> override
+  auto loop(bool& should_close) -> std::vector<std::shared_ptr<sentinel::proto::outbound_message>> override
   {
     if (!m_device) {
       m_device = microphone_device::create(m_config.name.c_str(), m_config.rate);
@@ -29,14 +30,16 @@ public:
 
     const auto samples = m_device->read();
 
-    const auto time = 0;
+    const auto buffer_duration = static_cast<float>(samples.size()) / static_cast<float>(m_sample_rate);
 
-    auto buf = motion_monitor::writer::create_microphone_update(
+    const auto time = get_clock_time() - static_cast<std::uint64_t>(buffer_duration * 1.0e6f);
+
+    auto msg = sentinel::proto::writer::create_microphone_update(
       samples.data(), samples.size(), m_sample_rate, time, m_config.sensor_id);
 
-    buffer_vec buffers;
+    std::vector<std::shared_ptr<sentinel::proto::outbound_message>> buffers;
 
-    buffers.emplace_back(std::move(buf));
+    buffers.emplace_back(msg);
 
     return buffers;
   }

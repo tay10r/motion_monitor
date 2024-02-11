@@ -1,6 +1,6 @@
 #pragma once
 
-#include <memory>
+#include <sentinel/proto.h>
 
 #include <uv.h>
 
@@ -29,7 +29,7 @@ public:
 
   virtual auto setup(const char* ip, int port) -> bool = 0;
 
-  virtual void publish_telemetry(const void* data, std::size_t size) = 0;
+  virtual void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) = 0;
 
   virtual void publish_frame(const image& img, const std::uint32_t sensor_id, const float anomaly_level) = 0;
 };

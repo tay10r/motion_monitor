@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sentinel/proto.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,4 +46,6 @@ public:
   }
 
   virtual void publish_camera_update(const image& img, std::uint32_t sensor_id, const float anomaly_level) = 0;
+
+  virtual void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) = 0;
 };

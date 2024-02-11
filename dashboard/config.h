@@ -26,6 +26,11 @@ struct config final
     int sensor_id{};
   };
 
+  struct microphone_widget_config final : public widget_config
+  {
+    int sensor_id{};
+  };
+
   struct chart_widget_config final : public widget_config
   {
     std::size_t max_history{ 1000 };
@@ -42,6 +47,8 @@ struct config final
     int grid_cols{ 3 };
 
     std::vector<camera_widget_config> cameras;
+
+    std::vector<microphone_widget_config> microphones;
 
     std::vector<chart_widget_config> charts;
   };

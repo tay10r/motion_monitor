@@ -35,6 +35,17 @@ load_ui_config(const nlohmann::json& root) -> config::ui_config
     cfg.cameras.emplace_back(std::move(widget));
   }
 
+  for (const auto& mic_cfg : root.at("microphone_widgets")) {
+
+    config::microphone_widget_config widget;
+
+    widget.sensor_id = mic_cfg.at("sensor_id").get<std::uint32_t>();
+
+    load_widget_config(mic_cfg, widget);
+
+    cfg.microphones.emplace_back(std::move(widget));
+  }
+
   for (const auto& chart_cfg : root.at("chart_widgets")) {
 
     config::chart_widget_config widget;

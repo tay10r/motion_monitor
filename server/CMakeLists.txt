@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14.7)
 
-project(motion_monitor)
+project(sentinel_server)
 
 option(FAKE_VIDEO_DEVICE "Whether or not to fake the video device API." OFF)
 option(ENABLE_TESTING "Whether or not to build the tests." OFF)
@@ -11,7 +11,7 @@ set(BUNDLE_PATH "" CACHE PATH "The path to the UI files that get bundled with th
 set(BUILD_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS FALSE CACHE BOOL "" FORCE)
 
-if(NOT TARGET motion_monitor_proto)
+if(NOT TARGET sentinel::proto)
   add_subdirectory(../proto proto)
 endif()
 
@@ -62,6 +62,7 @@ set(sources
   src/image.cpp
   src/config.h
   src/config.cpp
+  src/clock.h
   src/pipeline.h
   src/pipeline_runner.h
   src/pipeline_runner.cpp
@@ -86,58 +87,60 @@ else()
     src/video_device.cpp)
 endif()
 
-add_library(motion_monitor ${sources})
+add_library(sentinel_server ${sources})
 
 if(FAKE_VIDEO_DEVICE)
-  target_compile_definitions(motion_monitor PUBLIC FAKE_VIDEO_DEVICE=1)
+  target_compile_definitions(sentinel_server PUBLIC FAKE_VIDEO_DEVICE=1)
 endif()
 
-target_link_libraries(motion_monitor
+target_link_libraries(sentinel_server
   PUBLIC
     ${OpenCV_LIBS}
     $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
     spdlog::spdlog
     glm::glm
-    motion_monitor_proto
+    sentinel::proto
     llhttp::llhttp
     nlohmann_json::nlohmann_json
     yaml-cpp::yaml-cpp)
 
-target_include_directories(motion_monitor
+target_include_directories(sentinel_server
   PUBLIC
     ${OpenCV_INCLUDE_DIRS})
 
 if(ENABLE_AUDIO)
   find_package(ALSA REQUIRED)
-  target_link_libraries(motion_monitor PUBLIC ALSA::ALSA)
+  target_link_libraries(sentinel_server PUBLIC ALSA::ALSA)
 endif()
 
-add_executable(motion_monitor_cli
+add_library(sentinel::server ALIAS sentinel_server)
+
+add_executable(sentinel_server_cli
   main.cpp)
 
 if(BUNDLE_PATH)
 
-  target_compile_definitions(motion_monitor_cli PUBLIC WITH_BUNDLE=1)
+  target_compile_definitions(sentinel_server_cli PUBLIC WITH_BUNDLE=1)
 
   include(CMakeRC.cmake)
 
-  cmrc_add_resource_library(motion_monitor_resources
+  cmrc_add_resource_library(sentinel_server_resources
     "${BUNDLE_PATH}/dashboard.js"
     "${BUNDLE_PATH}/dashboard.wasm"
     "${BUNDLE_PATH}/index.html"
     WHENCE "${BUNDLE_PATH}/")
 
-  target_link_libraries(motion_monitor_cli PUBLIC motion_monitor_resources)
+  target_link_libraries(sentinel_server_cli PUBLIC sentinel_server_resources)
 
 endif()
 
-target_link_libraries(motion_monitor_cli PUBLIC motion_monitor)
+target_link_libraries(sentinel_server_cli PUBLIC sentinel::server)
 
-set_target_properties(motion_monitor_cli
+set_target_properties(sentinel_server_cli
   PROPERTIES
-    OUTPUT_NAME motion_monitor)
+    OUTPUT_NAME sentinel)
 
-install(TARGETS motion_monitor_cli motion_monitor
+install(TARGETS sentinel_server_cli sentinel_server
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)
@@ -148,9 +151,9 @@ include(CPack)
 
 if(ENABLE_TESTING)
   find_package(GTest CONFIG REQUIRED)
-  add_executable(motion_monitor_tests
+  add_executable(sentinel_server_tests
     tests/test_config_validation.cpp
     tests/test_pipeline_runner.cpp)
-  target_link_libraries(motion_monitor_tests PUBLIC motion_monitor GTest::gtest GTest::gtest_main)
+  target_link_libraries(sentinel_server_tests PUBLIC sentinel_server GTest::gtest GTest::gtest_main)
   enable_testing()
 endif()

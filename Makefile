@@ -2,7 +2,7 @@ DOCKER ?= docker
 BASE ?= debian:11
 ARCH ?= arm64
 VERSION := 0.1
-TAG := motion_monitor_$(ARCH):$(VERSION)
+TAG := sentinel_builder_$(ARCH):$(VERSION)
 PLATFORM := linux/$(ARCH)
 
 .PHONY: all
@@ -10,8 +10,8 @@ all: build
 
 .PHONY: build
 build:
-	$(DOCKER) run --name motion_monitor_builder --mount type=bind,source=$(PWD)/dist,destination=/home/user/dist -it $(TAG)
-	$(DOCKER) rm motion_monitor_builder
+	$(DOCKER) run --name sentinel_builder --mount type=bind,source=$(PWD)/dist,destination=/home/user/dist -it $(TAG)
+	$(DOCKER) rm sentinel_builder
 
 .PHONY: builder
 builder:
@@ -19,4 +19,4 @@ builder:
 
 .PHONY: save
 save:
-	$(DOCKER) save $(TAG) >motion_monitor_$(ARCH).tar
+	$(DOCKER) save $(TAG) >sentinel_builder_$(ARCH).tar

@@ -2,7 +2,7 @@
 
 #include "telemetry_stream.h"
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 #include <implot.h>
 
@@ -10,7 +10,7 @@ namespace {
 
 class chart_widget_impl final
   : public chart_widget
-  , public motion_monitor::payload_visitor
+  , public sentinel::proto::payload_visitor
 {
 public:
   chart_widget_impl(const config::chart_widget_config& cfg)
@@ -41,7 +41,7 @@ public:
 
   void handle_telemetry(const std::string& type, const void* payload, const std::size_t payload_size) override
   {
-    motion_monitor::decode_payload(type, payload, payload_size, *this);
+    sentinel::proto::decode_payload(type, payload, payload_size, *this);
   }
 
 protected:
@@ -57,11 +57,7 @@ protected:
   {
   }
 
-  void visit_microphone_update(const std::uint16_t*,
-                               std::uint32_t,
-                               std::uint32_t,
-                               std::uint64_t,
-                               std::uint32_t) override
+  void visit_microphone_update(const std::int16_t*, std::uint32_t, std::uint32_t, std::uint64_t, std::uint32_t) override
   {
     //
   }

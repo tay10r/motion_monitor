@@ -1,12 +1,14 @@
-#include <motion_monitor.h>
+#include <sentinel/client.h>
 
 #include <iostream>
 
 #include <cstdlib>
 
+using namespace sentinel::client;
+
 namespace {
 
-class observer_impl final : public motion_monitor::observer
+class observer_impl final : public observer
 {
 public:
   void on_error(const char* what) override { std::cerr << what << std::endl; }
@@ -32,7 +34,7 @@ main()
 
   uv_loop_init(&loop);
 
-  auto connection = motion_monitor::connection::create(&loop, /* handle interrupt */ true);
+  auto connection = connection::create(&loop, /* handle interrupt */ true);
 
   observer_impl obs;
 

@@ -68,7 +68,7 @@ private:
   /**
    * @brief The pipeline telemetry output.
    * */
-  std::vector<std::vector<std::uint8_t>> m_outputs;
+  std::vector<std::shared_ptr<sentinel::proto::outbound_message>> m_outputs;
 
   /**
    * @brief The observers to listen to telemetry with.

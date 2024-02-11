@@ -4,6 +4,7 @@
 
 #include "image.h"
 
+#include <random>
 #include <vector>
 
 namespace {
@@ -20,6 +21,10 @@ public:
 
   auto read_frame() -> image override
   {
+    if (!m_handle.isOpened()) {
+      return create_bad_image();
+    }
+
     cv::Mat data;
 
     m_handle.read(data);
@@ -47,8 +52,30 @@ public:
     return img;
   }
 
+protected:
+  auto create_bad_image() -> image
+  {
+    const int w = 640;
+    const int h = 480;
+
+    image img;
+
+    img.resize(w, h, 3);
+
+    std::uniform_int_distribution<int> dist(0, 255);
+
+    for (int i = 0; i < (w * h); i++) {
+      img.data[i * 3 + 0] = dist(m_rng);
+      img.data[i * 3 + 1] = dist(m_rng);
+      img.data[i * 3 + 2] = dist(m_rng);
+    }
+
+    return img;
+  }
+
 private:
   cv::VideoCapture m_handle;
+  std::mt19937 m_rng{ 0 };
 };
 
 } // namespace

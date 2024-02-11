@@ -2,7 +2,7 @@
 
 #include "image.h"
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 #include "uv.h"
 
@@ -30,7 +30,7 @@ encode_message(const image& img, const std::uint32_t sensor_id)
 
   const auto ts = time_point_cast<microseconds>(system_clock::now()).time_since_epoch().count();
 
-  return motion_monitor::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
+  return sentinel::proto::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
 }
 
 class client final
@@ -80,20 +80,21 @@ public:
 
     auto data = encode_message(img, sensor_id);
 
-    write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), std::move(data), this, on_image_write_complete);
+    write_operation::send(
+      reinterpret_cast<uv_stream_t*>(&m_socket), std::move(*data->buffer), this, on_image_write_complete);
 
     m_ready = false;
   }
 
-  void publish_telemetry(const void* data, std::size_t size)
+  void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg)
   {
     if (!m_ready) {
       return;
     }
 
-    const auto* ptr = static_cast<const std::uint8_t*>(data);
+    /* TODO : remove copy */
 
-    std::vector<std::uint8_t> copy(ptr, ptr + size);
+    std::vector<std::uint8_t> copy = *msg->buffer;
 
     write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), std::move(copy), nullptr, nullptr);
   }
@@ -144,7 +145,7 @@ protected:
 
   void attempt_unpack_message()
   {
-    const auto result = motion_monitor::read(reinterpret_cast<const std::uint8_t*>(m_read_buffer.data()), m_read_size);
+    const auto result = sentinel::proto::read(reinterpret_cast<const std::uint8_t*>(m_read_buffer.data()), m_read_size);
 
     if (result.payload_ready) {
       handle_message(result);
@@ -155,7 +156,7 @@ protected:
     m_read_buffer.erase(m_read_buffer.begin(), m_read_buffer.begin() + result.cull_size);
   }
 
-  void handle_message(const motion_monitor::read_result& res)
+  void handle_message(const sentinel::proto::read_result& res)
   {
     if (res.type_id == "ready") {
       m_ready = true;
@@ -236,10 +237,10 @@ public:
     }
   }
 
-  void publish_telemetry(const void* data, std::size_t size) override
+  void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) override
   {
     for (auto& c : m_clients) {
-      c->publish_telemetry(data, size);
+      c->publish_telemetry(msg);
     }
   }
 

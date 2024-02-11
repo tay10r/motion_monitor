@@ -1,10 +1,13 @@
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
+
+#include <functional>
 
 #include <cstring>
 
-namespace motion_monitor {
+namespace sentinel::proto {
 
-writer::writer(const char* type, const std::size_t payload_size)
+writer::writer(const char* type, const std::size_t payload_size, const bool conflate)
+  : m_type_hash(std::hash<std::string>{}(type /* note: string copy occurs here */))
 {
   const std::size_t header_size = 8;
 
@@ -38,13 +41,17 @@ writer::write(const void* data, std::size_t size)
 }
 
 auto
-writer::complete() -> std::vector<std::uint8_t>
+writer::complete() -> std::shared_ptr<outbound_message>
 {
   if (m_offset != m_data.size()) {
     throw message_incomplete_exception("Cannot finish a message with uninitialized data.");
   }
 
-  return std::move(m_data);
+  auto msg = std::make_shared<outbound_message>();
+  msg->type_hash = m_type_hash;
+  msg->conflate = m_conflate;
+  msg->buffer = std::make_shared<std::vector<std::uint8_t>>(std::move(m_data));
+  return msg;
 }
 
 auto
@@ -52,9 +59,9 @@ writer::create_rgb_camera_update(const std::uint8_t* data,
                                  std::uint16_t w,
                                  std::uint16_t h,
                                  std::uint64_t time,
-                                 std::uint32_t sensor_id) -> std::vector<std::uint8_t>
+                                 std::uint32_t sensor_id) -> std::shared_ptr<outbound_message>
 {
-  writer wr("rgb_camera::update", 2 + 2 + 8 + 4 + (w * h * 3));
+  writer wr("rgb_camera::update", 2 + 2 + 8 + 4 + (w * h * 3), /* conflate */ true);
 
   wr.write(&w, sizeof(w));
   wr.write(&h, sizeof(h));
@@ -70,10 +77,10 @@ writer::create_monochrome_camera_update(const std::uint8_t* data,
                                         std::uint16_t w,
                                         std::uint16_t h,
                                         std::uint64_t time,
-                                        std::uint32_t sensor_id) -> std::vector<std::uint8_t>
+                                        std::uint32_t sensor_id) -> std::shared_ptr<outbound_message>
 
 {
-  writer wr("monochrome_camera::update", 2 + 2 + 8 + 4 + (w * h));
+  writer wr("monochrome_camera::update", 2 + 2 + 8 + 4 + (w * h), /* conflate */ true);
 
   wr.write(&w, sizeof(w));
   wr.write(&h, sizeof(h));
@@ -89,9 +96,11 @@ writer::create_microphone_update(const std::int16_t* data,
                                  std::uint32_t size,
                                  std::uint32_t sample_rate,
                                  std::uint64_t time,
-                                 std::uint32_t sensor_id) -> std::vector<std::uint8_t>
+                                 std::uint32_t sensor_id) -> std::shared_ptr<outbound_message>
 {
-  writer wr("microphone::update", size * 2 + sizeof(size) + sizeof(time) + sizeof(sample_rate) + sizeof(sensor_id));
+  writer wr("microphone::update",
+            size * 2 + sizeof(size) + sizeof(time) + sizeof(sample_rate) + sizeof(sensor_id),
+            /* conflate */ false);
 
   wr.write(&sample_rate, sizeof(sample_rate));
   wr.write(&size, sizeof(size));
@@ -104,9 +113,9 @@ writer::create_microphone_update(const std::int16_t* data,
 
 auto
 writer::create_temperature_update(float temperature, std::uint64_t time, std::uint32_t sensor_id)
-  -> std::vector<std::uint8_t>
+  -> std::shared_ptr<outbound_message>
 {
-  writer wr("temperature::update", sizeof(float) + sizeof(time) + 4);
+  writer wr("temperature::update", sizeof(float) + sizeof(time) + 4, /* conflate */ true);
   wr.write(&temperature, sizeof(temperature));
   wr.write(&time, sizeof(time));
   wr.write(&sensor_id, sizeof(sensor_id));
@@ -114,11 +123,11 @@ writer::create_temperature_update(float temperature, std::uint64_t time, std::ui
 }
 
 auto
-writer::create_ready_update(std::uint64_t time) -> std::vector<std::uint8_t>
+writer::create_ready_update(std::uint64_t time) -> std::shared_ptr<outbound_message>
 {
-  writer wr("ready", sizeof(time));
+  writer wr("ready", sizeof(time), /* conflate */ true);
   wr.write(&time, sizeof(time));
   return wr.complete();
 }
 
-} // namespace motion_monitor
+} // namespace sentinel::proto

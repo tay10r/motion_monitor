@@ -3,7 +3,7 @@
 #include "image.h"
 #include "uv.h"
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 #include <llhttp.h>
 
@@ -47,8 +47,11 @@ public:
     uv_handle_set_data(reinterpret_cast<uv_handle_t*>(&m_socket), this);
 
     m_settings.on_url = on_url;
+
     m_settings.on_message_complete = on_message_complete;
+
     llhttp_init(&m_parser, HTTP_REQUEST, &m_settings);
+
     m_parser.data = this;
   }
 
@@ -80,11 +83,13 @@ public:
     }
   }
 
-  void set_latest_update(const buffer* buf, const float anomaly_level)
+  void set_latest_update(std::shared_ptr<sentinel::proto::outbound_message> msg, const float anomaly_level)
   {
     /* TODO : use anomaly level */
-    m_latest_update = buf;
+    m_latest_update = msg;
   }
+
+  void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) { m_latest_update = msg; }
 
 protected:
   static auto get_self(uv_handle_t* handle) -> http_client*
@@ -166,8 +171,14 @@ protected:
   {
     spdlog::info("Received GET request for '{}'.", m_request.url);
 
+    std::string url = m_request.url;
+
+    if (url == "/") {
+      url = "/index.html";
+    }
+
     {
-      auto it = m_resources->find(m_request.url);
+      auto it = m_resources->find(url);
 
       if (it != m_resources->end()) {
         respond(200, it->second.content_type.c_str(), it->second.data);
@@ -175,7 +186,7 @@ protected:
       }
     }
 
-    if (m_request.url == "/api/stream") {
+    if (url == "/api/stream") {
       respond(200, "application/octet-stream", get_latest_update());
       return;
     }
@@ -204,15 +215,14 @@ protected:
     write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), std::move(out), nullptr, nullptr);
   }
 
-  auto get_latest_update() const -> std::vector<std::uint8_t>
+  auto get_latest_update() const -> const std::vector<std::uint8_t>&
   {
-    std::vector<std::uint8_t> data;
-
-    if (m_latest_update) {
-      data = *m_latest_update;
+    if (!m_latest_update) {
+      static const std::vector<std::uint8_t> empty_response;
+      return empty_response;
     }
 
-    return data;
+    return *m_latest_update->buffer;
   }
 
 private:
@@ -230,7 +240,7 @@ private:
 
   request m_request;
 
-  const buffer* m_latest_update{ nullptr };
+  std::shared_ptr<sentinel::proto::outbound_message> m_latest_update{ nullptr };
 
   const resource_map* m_resources{ nullptr };
 };
@@ -290,12 +300,19 @@ public:
     const auto ts = time_point_cast<microseconds>(system_clock::now()).time_since_epoch().count();
 
     m_latest_update =
-      motion_monitor::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
+      sentinel::proto::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
 
     m_anomaly_level = anomaly_level;
 
     for (auto& c : m_clients) {
-      c->set_latest_update(&m_latest_update, anomaly_level);
+      c->set_latest_update(m_latest_update, anomaly_level);
+    }
+  }
+
+  void publish_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) override
+  {
+    for (auto& c : m_clients) {
+      c->publish_telemetry(msg);
     }
   }
 
@@ -338,7 +355,7 @@ protected:
 
     c->register_close_callback(self, on_client_close);
 
-    c->set_latest_update(&self->m_latest_update, self->m_anomaly_level);
+    c->set_latest_update(self->m_latest_update, self->m_anomaly_level);
 
     c->start_reading();
 
@@ -350,7 +367,7 @@ private:
 
   std::vector<std::unique_ptr<http_client>> m_clients;
 
-  std::vector<std::uint8_t> m_latest_update;
+  std::shared_ptr<sentinel::proto::outbound_message> m_latest_update;
 
   float m_anomaly_level{ 1 };
 

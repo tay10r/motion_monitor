@@ -2,6 +2,7 @@
 
 #include "camera_widget.h"
 #include "chart_widget.h"
+#include "microphone_widget.h"
 
 dashboard::dashboard(const config::ui_config& cfg)
   : m_grid_rows(cfg.grid_rows)
@@ -15,6 +16,16 @@ dashboard::dashboard(const config::ui_config& cfg)
                camera_cfg.row_span,
                camera_cfg.col_span,
                camera_widget::create(camera_cfg));
+  }
+
+  for (const auto& mic_cfg : cfg.microphones) {
+
+    add_widget(mic_cfg.label.c_str(),
+               mic_cfg.row,
+               mic_cfg.col,
+               mic_cfg.row_span,
+               mic_cfg.col_span,
+               microphone_widget::create(mic_cfg));
   }
 
   for (const auto& chart_cfg : cfg.charts) {

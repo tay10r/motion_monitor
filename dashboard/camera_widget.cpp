@@ -3,7 +3,7 @@
 #include "stop_watch.h"
 #include "telemetry_stream.h"
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 #include <GLES2/gl2.h>
 
@@ -18,7 +18,7 @@ namespace {
 
 class camera_widget_impl final
   : public camera_widget
-  , public motion_monitor::payload_visitor
+  , public sentinel::proto::payload_visitor_base
 {
 public:
   explicit camera_widget_impl(const config::camera_widget_config& cfg)
@@ -62,7 +62,7 @@ public:
 
   void handle_telemetry(const std::string& type_id, const void* payload, const std::size_t payload_size) override
   {
-    motion_monitor::decode_payload(type_id, payload, payload_size, *this);
+    sentinel::proto::decode_payload(type_id, payload, payload_size, *this);
   }
 
 protected:
@@ -102,26 +102,6 @@ protected:
     }
 
     update_image(rgba.data(), w, h, time);
-  }
-
-  void visit_microphone_update(const std::uint16_t* data,
-                               std::uint32_t size,
-                               std::uint32_t sample_rate,
-                               std::uint64_t time,
-                               std::uint32_t sensor_id) override
-  {
-    //
-  }
-
-  void visit_temperature_update(const float temperature, const std::uint64_t time, std::uint32_t sensor_id) override
-  {
-    //
-  }
-
-  auto visit_unknown_payload(const std::string& type, const void* payload, const std::size_t payload_size)
-    -> bool override
-  {
-    return false;
   }
 
 protected:

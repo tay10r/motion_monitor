@@ -12,17 +12,17 @@ namespace {
 class fake_pipeline final : public pipeline
 {
 public:
-  auto loop(bool& should_close) -> std::vector<std::vector<std::uint8_t>> override
+  auto loop(bool& should_close) -> std::vector<std::shared_ptr<sentinel::proto::outbound_message>> override
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    std::vector<std::vector<std::uint8_t>> output;
+    std::vector<std::shared_ptr<sentinel::proto::outbound_message>> output;
 
     m_counter++;
 
     if (m_counter == 3) {
 
-      output.emplace_back(std::vector<std::uint8_t>{});
+      output.emplace_back(std::make_shared<sentinel::proto::outbound_message>());
 
       should_close = true;
     }
@@ -44,7 +44,7 @@ public:
   {
   }
 
-  void observe_telemetry(const std::uint8_t*, const std::size_t) override { uv_stop(m_loop); }
+  void observe_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) override { uv_stop(m_loop); }
 
 private:
   uv_loop_t* m_loop{ nullptr };

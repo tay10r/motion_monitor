@@ -1,6 +1,6 @@
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
-namespace motion_monitor {
+namespace sentinel::proto {
 
 namespace {
 
@@ -102,4 +102,4 @@ decode_payload(const std::string& type, const void* payload, std::size_t payload
   return true;
 }
 
-} // namespace motion_monitor
+} // namespace sentinel::proto

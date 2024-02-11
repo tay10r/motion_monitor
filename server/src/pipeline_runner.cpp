@@ -67,7 +67,7 @@ pipeline_runner::on_async_update(uv_async_t* handle)
 {
   auto* self = get_self(to_handle(handle));
 
-  std::vector<std::vector<std::uint8_t>> outs;
+  std::vector<std::shared_ptr<sentinel::proto::outbound_message>> outs;
 
   {
     std::lock_guard<std::mutex> lock(self->m_lock);
@@ -75,9 +75,9 @@ pipeline_runner::on_async_update(uv_async_t* handle)
     outs = std::move(self->m_outputs);
   }
 
-  for (const auto& out : outs) {
+  for (auto& out : outs) {
     for (auto* obs : self->m_observers) {
-      obs->observe_telemetry(out.data(), out.size());
+      obs->observe_telemetry(out);
     }
   }
 }

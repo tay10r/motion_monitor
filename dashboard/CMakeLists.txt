@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.14.7)
 
-project(motion_monitor_dashboard)
+project(sentinel_dashboard)
 
-if(NOT TARGET motion_monitor_proto)
+if(NOT TARGET sentinel::proto)
   add_subdirectory(../proto proto)
 endif()
 
@@ -30,7 +30,9 @@ set(sources
   chart_widget.h
   chart_widget.cpp
   camera_widget.h
-  camera_widget.cpp)
+  camera_widget.cpp
+  microphone_widget.h
+  microphone_widget.cpp)
 
 if(EMSCRIPTEN)
   list(APPEND sources
@@ -40,23 +42,23 @@ else()
     fetch_request_fs.cpp)
 endif()
 
-add_executable(motion_monitor_dashboard WIN32 ${sources})
+add_executable(sentinel_dashboard WIN32 ${sources})
 
-target_compile_features(motion_monitor_dashboard PUBLIC cxx_std_17)
+target_compile_features(sentinel_dashboard PUBLIC cxx_std_17)
 
-set_target_properties(motion_monitor_dashboard
+set_target_properties(sentinel_dashboard
   PROPERTIES
     OUTPUT_NAME dashboard)
 
 if(EMSCRIPTEN)
-  target_link_options(motion_monitor_dashboard
+  target_link_options(sentinel_dashboard
     PUBLIC
       "SHELL: -s FETCH=1")
 endif()
 
-target_link_libraries(motion_monitor_dashboard
+target_link_libraries(sentinel_dashboard
   PUBLIC
-    motion_monitor_proto
+    sentinel_proto
     uikit::uikit
     uikit::main
     nlohmann_json::nlohmann_json)

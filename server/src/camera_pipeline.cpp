@@ -25,9 +25,7 @@ public:
 
     m_is_open = m_video_device->open(cfg.device_index);
 
-    if (m_is_open) {
-      uv_timer_start(&m_timer, on_timer_expire, 0, cfg.read_interval);
-    }
+    uv_timer_start(&m_timer, on_timer_expire, 0, cfg.read_interval);
   }
 
   void close() override { uv_close(to_handle(&m_timer), nullptr); }

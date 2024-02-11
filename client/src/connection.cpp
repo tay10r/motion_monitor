@@ -1,13 +1,13 @@
-#include <motion_monitor.h>
+#include <sentinel/client.h>
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 #include <sstream>
 #include <vector>
 
 #include <cassert>
 
-namespace motion_monitor {
+namespace sentinel::client {
 
 namespace {
 
@@ -160,9 +160,10 @@ public:
 
   void notify_ready() override
   {
-    writer w("ready", 0);
+    proto::writer w("ready", 0, /* conflate */ true);
 
-    write_operation::send(reinterpret_cast<uv_stream_t*>(&m_socket), w.complete(), nullptr, nullptr);
+    write_operation::send(
+      reinterpret_cast<uv_stream_t*>(&m_socket), std::move(*w.complete()->buffer), nullptr, nullptr);
   }
 
   void set_streaming_enabled(const bool enabled) override { m_streaming_enabled = enabled; }
@@ -254,7 +255,7 @@ protected:
 
   void attempt_read_message()
   {
-    const auto result = read(m_read_buffer.data(), m_read_size);
+    const auto result = proto::read(m_read_buffer.data(), m_read_size);
 
     if (result.payload_ready) {
       handle_message(result);
@@ -265,7 +266,7 @@ protected:
     m_read_size -= result.cull_size;
   }
 
-  void handle_message(const read_result& r)
+  void handle_message(const proto::read_result& r)
   {
     for (auto* o : m_observers) {
       o->on_payload(r.type_id, m_read_buffer.data() + r.payload_offset, r.payload_size);
@@ -311,4 +312,4 @@ connection::create(uv_loop_t* loop, bool interrupt_handling) -> std::unique_ptr<
   return std::make_unique<connection_impl>(loop, interrupt_handling);
 }
 
-} // namespace motion_monitor
+} // namespace sentinel::client

@@ -10,6 +10,18 @@
 
 namespace {
 
+void
+load_widget_config(const YAML::Node& node, config::widget_config& w)
+{
+  w.label = node["label"].as<std::string>();
+
+  w.col = node["col"].as<int>();
+  w.row = node["row"].as<int>();
+
+  w.col_span = node["col_span"].as<int>();
+  w.row_span = node["row_span"].as<int>();
+}
+
 auto
 load_ui_config(const YAML::Node& root) -> config::ui_config
 {
@@ -22,17 +34,22 @@ load_ui_config(const YAML::Node& root) -> config::ui_config
 
     config::camera_widget_config cam_cfg;
 
-    cam_cfg.label = widget_cfg["label"].as<std::string>();
+    load_widget_config(widget_cfg, cam_cfg);
 
     cam_cfg.sensor_id = widget_cfg["sensor_id"].as<std::uint32_t>();
 
-    cam_cfg.col = widget_cfg["col"].as<int>();
-    cam_cfg.row = widget_cfg["row"].as<int>();
-
-    cam_cfg.col_span = widget_cfg["col_span"].as<int>();
-    cam_cfg.row_span = widget_cfg["row_span"].as<int>();
-
     cfg.camera_widgets.emplace_back(std::move(cam_cfg));
+  }
+
+  for (const auto& widget_cfg : root["microphone_widgets"]) {
+
+    config::microphone_widget_config mic_cfg;
+
+    load_widget_config(widget_cfg, mic_cfg);
+
+    mic_cfg.sensor_id = widget_cfg["sensor_id"].as<std::uint32_t>();
+
+    cfg.microphone_widgets.emplace_back(std::move(mic_cfg));
   }
 
   for (const auto widget_cfg : root["chart_widgets"]) {
@@ -149,6 +166,21 @@ export_ui_config(const config::ui_config& cfg) -> nlohmann::json
   }
 
   root["camera_widgets"] = std::move(camera_widgets);
+
+  std::vector<nlohmann::json> microphone_widgets;
+
+  for (const auto& mic : cfg.microphone_widgets) {
+
+    nlohmann::json node;
+
+    node["sensor_id"] = mic.sensor_id;
+
+    export_widget_config(mic, node);
+
+    microphone_widgets.emplace_back(std::move(node));
+  }
+
+  root["microphone_widgets"] = microphone_widgets;
 
   std::vector<nlohmann::json> chart_widgets;
 

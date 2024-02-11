@@ -8,7 +8,7 @@
 
 #include <uv.h>
 
-namespace motion_monitor {
+namespace sentinel::client {
 
 class observer
 {
@@ -87,4 +87,4 @@ public:
   virtual auto caught_interrupt() const -> bool = 0;
 };
 
-} // namespace motion_monitor
+} // namespace sentinel::client

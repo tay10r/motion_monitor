@@ -1,29 +1,31 @@
 cmake_minimum_required(VERSION 3.14.7)
 
-project(motion_monitor_client)
+project(sentinel_client)
 
-option(MOTION_MONITOR_DEMO "Whether or not to build the demo app." ON)
+option(SENTINEL_CLIENT_DEMO "Whether or not to build the demo app." ON)
 
 find_package(libuv CONFIG REQUIRED)
 
-if(NOT TARGET motion_monitor_proto)
+if(NOT TARGET sentinel::proto)
   add_subdirectory(../proto proto)
 endif()
 
-add_library(motion_monitor_client
-  include/motion_monitor.h
+add_library(sentinel_client
+  include/sentinel/client.h
   src/connection.cpp)
 
-target_include_directories(motion_monitor_client
+target_include_directories(sentinel_client
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-target_link_libraries(motion_monitor_client
+target_link_libraries(sentinel_client
   PUBLIC
     $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
-    motion_monitor_proto)
+    sentinel::proto)
 
-if(MOTION_MONITOR_DEMO)
+add_library(sentinel::client ALIAS sentinel_client)
+
+if(SENTINEL_CLIENT_DEMO)
 
   if(NOT TARGET stb)
     add_subdirectory(../deps deps)
@@ -37,11 +39,11 @@ if(MOTION_MONITOR_DEMO)
 
   function(add_demo name)
 
-    set(target motion_monitor_demo_${name})
+    set(target sentinel_demo_${name})
 
     add_executable(${target} ${ARGN})
 
-    target_link_libraries(${target} PUBLIC motion_monitor_client)
+    target_link_libraries(${target} PUBLIC sentinel::client)
 
     set_target_properties(${target} PROPERTIES OUTPUT_NAME ${name})
 
@@ -56,6 +58,6 @@ if(MOTION_MONITOR_DEMO)
 
   add_demo(capture demo/capture/main.cpp)
 
-  target_link_libraries(motion_monitor_demo_capture PUBLIC stb)
+  target_link_libraries(sentinel_demo_capture PUBLIC stb)
 
 endif()

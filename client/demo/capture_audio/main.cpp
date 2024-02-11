@@ -1,5 +1,5 @@
-#include <motion_monitor.h>
-#include <motion_monitor_proto.h>
+#include <sentinel/client.h>
+#include <sentinel/proto.h>
 
 #include <iomanip>
 #include <iostream>
@@ -12,12 +12,14 @@
 
 namespace {
 
+using namespace sentinel;
+
 class observer_impl final
-  : public motion_monitor::observer
-  , public motion_monitor::payload_visitor
+  : public client::observer
+  , public proto::payload_visitor
 {
 public:
-  explicit observer_impl(motion_monitor::connection* conn)
+  explicit observer_impl(client::connection* conn)
     : m_connection(conn)
   {
   }
@@ -32,7 +34,7 @@ public:
 
   void on_payload(const std::string& type, const void* payload, const std::size_t payload_size) override
   {
-    motion_monitor::decode_payload(type, payload, payload_size, *this);
+    proto::decode_payload(type, payload, payload_size, *this);
   }
 
   void visit_monochrome_camera_update(const std::uint8_t* data,
@@ -95,7 +97,7 @@ public:
   }
 
 private:
-  motion_monitor::connection* m_connection{ nullptr };
+  client::connection* m_connection{ nullptr };
 
   std::vector<float> m_samples;
 
@@ -117,7 +119,7 @@ main(int argc, char** argv)
 
   uv_loop_init(&loop);
 
-  auto connection = motion_monitor::connection::create(&loop, /* handle interrupt */ true);
+  auto connection = client::connection::create(&loop, /* handle interrupt */ true);
 
   observer_impl obs(connection.get());
 

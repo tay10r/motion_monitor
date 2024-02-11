@@ -72,6 +72,11 @@ struct config final
     std::uint32_t sensor_id{};
   };
 
+  struct microphone_widget_config final : public widget_config
+  {
+    std::uint32_t sensor_id{};
+  };
+
   struct ui_config final
   {
     int grid_rows{ 3 };
@@ -79,6 +84,8 @@ struct config final
     int grid_cols{ 3 };
 
     std::vector<camera_widget_config> camera_widgets;
+
+    std::vector<microphone_widget_config> microphone_widgets;
   };
 
   std::vector<camera_config> cameras;

@@ -19,7 +19,7 @@ RUN git clone https://github.com/microsoft/vcpkg.git
 RUN cd vcpkg && ./bootstrap-vcpkg.sh -disableMetrics
 USER root
 USER user
-RUN cd vcpkg && ./vcpkg install spdlog opencv4 libuv glm yaml-cpp nlohmann-json
+RUN cd vcpkg && ./vcpkg install spdlog opencv4 libuv glm yaml-cpp nlohmann-json alsa
 
 # Setup emsdk
 RUN git clone https://github.com/emscripten-core/emsdk

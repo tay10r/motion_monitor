@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sentinel/proto.h>
+
 #include <vector>
 
 #include <cstdint>
@@ -20,5 +22,5 @@ public:
    *
    * @param should_close May be set by the pipeline, in which case it will be closed before the next iteration.
    * */
-  virtual auto loop(bool& should_close) -> buffer_vec = 0;
+  virtual auto loop(bool& should_close) -> std::vector<std::shared_ptr<sentinel::proto::outbound_message>> = 0;
 };

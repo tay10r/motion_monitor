@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sentinel/proto.h>
+
 #include <cstddef>
 #include <cstdint>
 
@@ -14,9 +16,7 @@ public:
   /**
    * @brief Called when telemetry is produced by an entity, such as a sensor pipeline or remote peer.
    *
-   * @param data The buffer containing the telemetry data.
-   *
-   * @param size The size of the telemetry buffer.
+   * @param msg The message to observe.
    * */
-  virtual void observe_telemetry(const std::uint8_t* data, std::size_t size) = 0;
+  virtual void observe_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) = 0;
 };

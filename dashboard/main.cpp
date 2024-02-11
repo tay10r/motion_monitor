@@ -1,7 +1,7 @@
 #include <uikit/fonts.hpp>
 #include <uikit/main.hpp>
 
-#include <motion_monitor_proto.h>
+#include <sentinel/proto.h>
 
 #include "config.h"
 #include "dashboard.h"
@@ -103,7 +103,7 @@ protected:
 
       const auto* data = static_cast<const std::uint8_t*>(m_telemetry_fetch_request->get_data());
 
-      const auto result = motion_monitor::read(data, m_telemetry_fetch_request->get_size());
+      const auto result = sentinel::proto::read(data, m_telemetry_fetch_request->get_size());
 
       if (result.payload_ready) {
 

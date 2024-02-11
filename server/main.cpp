@@ -19,7 +19,7 @@
 
 #ifdef WITH_BUNDLE
 #include <cmrc/cmrc.hpp>
-CMRC_DECLARE(motion_monitor_resources);
+CMRC_DECLARE(sentinel_server_resources);
 #endif
 
 namespace {
@@ -40,7 +40,7 @@ to_handle(uv_signal_t* handle) -> uv_handle_t*
 auto
 open_rc_file(const char* path) -> std::vector<std::uint8_t>
 {
-  const auto fs = cmrc::motion_monitor_resources::get_filesystem();
+  const auto fs = cmrc::sentinel_server_resources::get_filesystem();
 
   const auto file = fs.open(path);
 
@@ -140,11 +140,11 @@ protected:
     uv_stop(&self->m_loop);
   }
 
-  void observe_telemetry(const std::uint8_t* data, const std::size_t size) override
+  void observe_telemetry(std::shared_ptr<sentinel::proto::outbound_message>& msg) override
   {
-    spdlog::info("got telemetry.");
+    m_server->publish_telemetry(msg);
 
-    m_server->publish_telemetry(data, size);
+    m_http_server->publish_telemetry(msg);
   }
 
   void on_image_update(const image& img, const std::uint32_t sensor_id, const float anomaly_level) override

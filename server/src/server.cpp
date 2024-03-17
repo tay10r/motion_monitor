@@ -24,13 +24,14 @@ clamp(Scalar x, Scalar min, Scalar max) -> Scalar
 }
 
 auto
-encode_message(const image& img, const std::uint32_t sensor_id)
+encode_message(const image& img, const std::uint32_t sensor_id, const float jpeg_quality)
 {
   using namespace std::chrono;
 
   const auto ts = time_point_cast<microseconds>(system_clock::now()).time_since_epoch().count();
 
-  return sentinel::proto::writer::create_rgb_camera_update(img.data.data(), img.width, img.height, ts, sensor_id);
+  return sentinel::proto::writer::create_rgb_camera_update(
+    img.data.data(), img.width, img.height, ts, sensor_id, {}, jpeg_quality);
 }
 
 class client final
@@ -78,7 +79,7 @@ public:
       return;
     }
 
-    auto data = encode_message(img, sensor_id);
+    auto data = encode_message(img, sensor_id, 0.5f);
 
     write_operation::send(
       reinterpret_cast<uv_stream_t*>(&m_socket), std::move(*data->buffer), this, on_image_write_complete);

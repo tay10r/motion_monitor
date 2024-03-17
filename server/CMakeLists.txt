@@ -11,6 +11,8 @@ set(BUNDLE_PATH "" CACHE PATH "The path to the UI files that get bundled with th
 set(BUILD_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS FALSE CACHE BOOL "" FORCE)
 
+add_subdirectory(../deps deps)
+
 if(NOT TARGET sentinel::proto)
   add_subdirectory(../proto proto)
 endif()
@@ -49,8 +51,6 @@ find_package(libuv CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(OpenCV REQUIRED)
 
-add_subdirectory(../deps deps)
-
 set(sources
   src/detector.h
   src/detector.cpp
@@ -68,9 +68,7 @@ set(sources
   src/pipeline_runner.cpp
   src/video_device.h
   src/video_pipeline.h
-  src/video_pipeline.cpp
-  src/camera_pipeline.h
-  src/camera_pipeline.cpp)
+  src/video_pipeline.cpp)
 
 if(ENABLE_AUDIO)
   list(APPEND sources
@@ -141,6 +139,9 @@ target_link_libraries(sentinel_server_cli PUBLIC sentinel::server)
 set_target_properties(sentinel_server_cli
   PROPERTIES
     OUTPUT_NAME sentinel)
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/default_config.yaml"
+  "${CMAKE_CURRENT_BINARY_DIR}/config.yaml")
 
 install(TARGETS sentinel_server_cli sentinel_server
   RUNTIME DESTINATION bin

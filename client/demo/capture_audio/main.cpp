@@ -37,24 +37,14 @@ public:
     proto::decode_payload(type, payload, payload_size, *this);
   }
 
-  void visit_monochrome_camera_update(const std::uint8_t* data,
-                                      const std::uint16_t w,
-                                      const std::uint16_t h,
-                                      const std::uint64_t time,
-                                      const std::uint32_t sensor_id) override
+  void visit_monochrome_camera_frame_event(const proto::camera_frame_event& ev) override
   {
     std::cout << "on monochrome image" << std::endl;
     //
     //
   }
 
-  void visit_rgb_camera_update(const std::uint8_t* data,
-                               const std::uint16_t w,
-                               const std::uint16_t h,
-                               const std::uint64_t time,
-                               const std::uint32_t sensor_id) override
-  {
-  }
+  void visit_rgb_camera_frame_event(const proto::camera_frame_event& ev) override {}
 
   void visit_microphone_update(const std::int16_t* data,
                                const std::uint32_t size,

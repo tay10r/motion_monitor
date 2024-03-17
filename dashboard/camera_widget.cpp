@@ -66,42 +66,33 @@ public:
   }
 
 protected:
-  void visit_rgb_camera_update(const std::uint8_t* data,
-                               std::uint16_t w,
-                               std::uint16_t h,
-                               std::uint64_t time,
-                               std::uint32_t sensor_id) override
+  void visit_rgb_camera_frame_event(const sentinel::proto::camera_frame_event& ev) override
   {
-    std::vector<std::uint8_t> rgba(w * h * 4, 0);
+    std::vector<std::uint8_t> rgba(ev.w * ev.h * 4, 0);
 
-    for (std::size_t i = 0; i < (static_cast<std::size_t>(w) * h); i++) {
+    for (std::size_t i = 0; i < (static_cast<std::size_t>(ev.w) * ev.h); i++) {
 
-      rgba[i * 4 + 0] = data[i * 3 + 0];
-      rgba[i * 4 + 1] = data[i * 3 + 1];
-      rgba[i * 4 + 2] = data[i * 3 + 2];
-
+      rgba[i * 4 + 0] = ev.data[i * 3 + 0];
+      rgba[i * 4 + 1] = ev.data[i * 3 + 1];
+      rgba[i * 4 + 2] = ev.data[i * 3 + 2];
       rgba[i * 4 + 3] = 255;
     }
 
-    update_image(rgba.data(), w, h, time);
+    update_image(rgba.data(), ev.w, ev.h, ev.time);
   }
 
-  void visit_monochrome_camera_update(const std::uint8_t* data,
-                                      std::uint16_t w,
-                                      std::uint16_t h,
-                                      std::uint64_t time,
-                                      std::uint32_t sensor_id) override
+  void visit_monochrome_camera_frame_event(const sentinel::proto::camera_frame_event& ev) override
   {
-    std::vector<std::uint8_t> rgba(w * h * 4);
+    std::vector<std::uint8_t> rgba(ev.w * ev.h * 4);
 
-    for (std::size_t i = 0; i < (static_cast<std::size_t>(w) * h); i++) {
-      rgba[i * 4 + 0] = data[i];
-      rgba[i * 4 + 1] = data[i];
-      rgba[i * 4 + 2] = data[i];
+    for (std::size_t i = 0; i < (static_cast<std::size_t>(ev.w) * ev.h); i++) {
+      rgba[i * 4 + 0] = ev.data[i];
+      rgba[i * 4 + 1] = ev.data[i];
+      rgba[i * 4 + 2] = ev.data[i];
       rgba[i * 4 + 3] = 255;
     }
 
-    update_image(rgba.data(), w, h, time);
+    update_image(rgba.data(), ev.w, ev.h, ev.time);
   }
 
 protected:

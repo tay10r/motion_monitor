@@ -37,22 +37,14 @@ public:
     proto::decode_payload(type, payload, payload_size, *this);
   }
 
-  void visit_monochrome_camera_update(const std::uint8_t* data,
-                                      const std::uint16_t w,
-                                      const std::uint16_t h,
-                                      const std::uint64_t time,
-                                      const std::uint32_t sensor_id) override
+  void visit_monochrome_camera_frame_event(const proto::camera_frame_event& ev) override
   {
     std::cout << "on monochrome image" << std::endl;
     //
     //
   }
 
-  void visit_rgb_camera_update(const std::uint8_t* data,
-                               const std::uint16_t w,
-                               const std::uint16_t h,
-                               const std::uint64_t time,
-                               const std::uint32_t sensor_id) override
+  void visit_rgb_camera_frame_event(const proto::camera_frame_event& ev) override
   {
     std::cout << "on image" << std::endl;
 
@@ -62,7 +54,7 @@ public:
 
     std::cout << "saving frame '" << path << "'" << std::endl;
 
-    stbi_write_png(path.c_str(), w, h, 3, data, w * 3);
+    stbi_write_png(path.c_str(), ev.w, ev.h, 3, ev.data, ev.w * 3);
 
     m_frame_counter++;
   }

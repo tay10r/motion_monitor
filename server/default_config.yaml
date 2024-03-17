@@ -19,14 +19,22 @@
 # http_server_enabled: true
 
 cameras:
-  - name: 'Crib Camera'
-
+  - name: 'Front Door Camera'
     device_index: 0
-
-    # The number of milliseconds between frame grabs.
-    #
-    # read_interval: 1000
-
     # Path to the ONNX model containing the detector.
     #
     # detector_path: ''
+
+landscape_ui:
+  grid:
+    rows: 2
+    cols: 3
+  camera_widgets:
+    - label: 'Front Door Camera'
+      sensor_id: 0
+      row: 0
+      col: 0
+      row_span: 1
+      col_span: 1
+  microphone_widgets: []
+  chart_widgets: []

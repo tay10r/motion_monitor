@@ -1,5 +1,9 @@
 #include <sentinel/proto.h>
 
+#include <optional>
+
+#include <stb_image.h>
+
 namespace sentinel::proto {
 
 namespace {
@@ -65,25 +69,53 @@ f32(const std::uint8_t* ptr) -> float
   return *reinterpret_cast<const float*>(ptr);
 }
 
+auto
+decode_camera_frame_event(const uint8_t* payload, const std::size_t size, const std::size_t channels)
+  -> std::optional<camera_frame_event>
+{
+  const auto buf_size = u32(payload);
+
+  if ((buf_size + 16) != size) {
+    return {};
+  }
+
+  int w = 0;
+  int h = 0;
+  auto* ptr = stbi_load_from_memory(payload + 16, buf_size, &w, &h, nullptr, 3);
+  if (ptr == nullptr) {
+    return {};
+  }
+
+  camera_frame_event ev{};
+  ev.allocated_pixel_data.reset(ptr);
+  ev.w = w;
+  ev.h = h;
+  ev.time = u64(payload + 4);
+  ev.sensor_id = u32(payload + 12);
+  ev.data = ptr;
+  return ev;
+}
+
 } // namespace
 
 auto
-decode_payload(const std::string& type, const void* payload, std::size_t payload_size, payload_visitor& visitor) -> bool
+decode_payload(const std::string& type, const void* payload, const std::size_t payload_size, payload_visitor& visitor)
+  -> bool
 {
   const std::uint8_t* ptr = static_cast<const std::uint8_t*>(payload);
 
   if (type == "rgb_camera::update") {
-    const auto w = u16(ptr);
-    const auto h = u16(ptr + 2);
-    const auto t = u64(ptr + 4);
-    const auto id = u32(ptr + 12);
-    visitor.visit_rgb_camera_update(ptr + 16, w, h, t, id);
+    const auto ev = decode_camera_frame_event(ptr, payload_size, 3);
+    if (!ev) {
+      return false;
+    }
+    visitor.visit_rgb_camera_frame_event(ev.value());
   } else if (type == "monochrome_camera::update") {
-    const auto w = u16(ptr);
-    const auto h = u16(ptr + 2);
-    const auto t = u64(ptr + 4);
-    const auto id = u32(ptr + 12);
-    visitor.visit_rgb_camera_update(ptr + 16, w, h, t, id);
+    const auto ev = decode_camera_frame_event(ptr, payload_size, 1);
+    if (!ev) {
+      return false;
+    }
+    visitor.visit_monochrome_camera_frame_event(ev.value());
   } else if (type == "microphone::update") {
     const auto r = u32(ptr);
     const auto s = u32(ptr + 4);

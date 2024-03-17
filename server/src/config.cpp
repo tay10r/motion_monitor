@@ -91,8 +91,10 @@ load_impl(const YAML::Node& root, config& cfg)
     config::camera_config cam_cfg;
     cam_cfg.device_index = node["device_index"].as<int>();
     cam_cfg.name = node["name"].as<std::string>();
-    cam_cfg.read_interval = node["read_interval"].as<int>(1000);
-    cam_cfg.detector_path = node["detector_path"].as<std::string>("");
+    cam_cfg.jpeg_quality = node["jpeg_quality"].as<float>();
+
+    const auto& people_detection = node["people_detection"];
+    cam_cfg.people_detection_enabled = people_detection["enabled"].as<bool>();
 
     cfg.cameras.emplace_back(std::move(cam_cfg));
   }

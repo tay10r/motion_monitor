@@ -26,14 +26,14 @@ struct config final
     int device_index{};
 
     /**
-     * @brief The number of milliseconds between frame grabs.
+     * @brief The quality of JPEG to produce - a trade off between bandwidth and image quality.
      * */
-    int read_interval{ 100 };
+    float jpeg_quality{ 0.5f };
 
     /**
-     * @brief The path to the detector model.
+     * @brief Whether or not to enable the HOG-SVM people detector.
      * */
-    std::string detector_path;
+    bool people_detection_enabled{ false };
   };
 
   struct microphone_config final

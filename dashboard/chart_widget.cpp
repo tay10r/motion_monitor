@@ -45,17 +45,9 @@ public:
   }
 
 protected:
-  void visit_rgb_camera_update(const std::uint8_t*, std::uint16_t, std::uint16_t, std::uint64_t, std::uint32_t) override
-  {
-  }
+  void visit_rgb_camera_frame_event(const sentinel::proto::camera_frame_event& ev) override {}
 
-  void visit_monochrome_camera_update(const std::uint8_t*,
-                                      std::uint16_t,
-                                      std::uint16_t,
-                                      std::uint64_t,
-                                      std::uint32_t) override
-  {
-  }
+  void visit_monochrome_camera_frame_event(const sentinel::proto::camera_frame_event& ev) override {}
 
   void visit_microphone_update(const std::int16_t*, std::uint32_t, std::uint32_t, std::uint64_t, std::uint32_t) override
   {

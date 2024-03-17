@@ -1,4 +1,3 @@
-#include "src/camera_pipeline.h"
 #include "src/config.h"
 #include "src/http_server.h"
 #include "src/image.h"

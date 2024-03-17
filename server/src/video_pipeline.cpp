@@ -28,7 +28,7 @@ public:
     const auto img = m_device->read_frame();
 
     auto msg = sentinel::proto::writer::create_rgb_camera_update(
-      img.data.data(), img.width, img.height, get_clock_time(), m_config.sensor_id);
+      img.data.data(), img.width, img.height, get_clock_time(), m_config.sensor_id, {}, m_config.jpeg_quality);
 
     return { std::move(msg) };
   }

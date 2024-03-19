@@ -8,6 +8,29 @@
 
 struct config final
 {
+  enum class camera_exposure_mode
+  {
+    /**
+     * @brief The exposure mode is not controlled in this case.
+     * */
+    none,
+
+    /**
+     * @brief The exposure is manually controlled.
+     * */
+    manual,
+
+    /**
+     * @brief The camera's auto exposure is used.
+     * */
+    automatic,
+
+    /**
+     * @brief The exposure level is optimized to increase the gradient magnitude of the image.
+     * */
+    gradient_maximization
+  };
+
   struct camera_config final
   {
     /**
@@ -34,6 +57,11 @@ struct config final
      * @brief The height of each frame, in terms of pixels.
      * */
     int frame_height{ 480 };
+
+    /**
+     * @brief Used for deciding how to control the exposure.
+     * */
+    camera_exposure_mode exposure_mode{ camera_exposure_mode::none };
 
     /**
      * @brief The quality of JPEG to produce - a trade off between bandwidth and image quality.

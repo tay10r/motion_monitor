@@ -25,6 +25,22 @@ cameras:
     #
     # detector_path: ''
 
+    # Set the exposure mode to either:
+    #
+    #   - 'none'
+    #     The exposure mode is not modified at all.
+    #
+    #   - 'auto'
+    #     The exposure mode is set to automatic.
+    #
+    #   - 'manual'
+    #     The exposure mode is set to manual.
+    #
+    #   - 'gradient_maximization'
+    #     The exposure mode is set to manual and modified to maximize the image gradient magnitude.
+    #
+    exposure_mode: 'gradient_maximization'
+
     # The quality-to-compression ratio when sending the frames over the network.
     #
     stream_quality: 0.5

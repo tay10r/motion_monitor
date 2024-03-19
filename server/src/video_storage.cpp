@@ -9,8 +9,6 @@
 #include <limits>
 #include <sstream>
 
-#include <iostream>
-
 namespace {
 
 template<typename Scalar>
@@ -62,8 +60,6 @@ public:
       }
 
       m_existing_paths.emplace_back(timestamp, entry_path.string());
-
-      std::cout << entry_path << std::endl;
     }
 
     using entry_type = std::pair<std::uint64_t, std::string>;
@@ -75,6 +71,10 @@ public:
 
   void store(const image& img) override
   {
+    if (img.frame.empty()) {
+      return;
+    }
+
     std::ostringstream path_stream;
     if (!m_path.empty()) {
       path_stream << m_path << '/';
@@ -115,8 +115,6 @@ protected:
       const auto frame_t = it->first;
 
       const auto dt = (frame_t > last_frame_t) ? static_cast<std::uint64_t>(0) : (last_frame_t - frame_t);
-
-      std::cout << dt << std::endl;
 
       if (dt > m_max_dt) {
         std::filesystem::remove(it->second);

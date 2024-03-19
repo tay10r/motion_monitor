@@ -14,4 +14,10 @@ public:
   virtual auto open(int device_index, int frame_w, int frame_h) -> bool = 0;
 
   virtual auto read_frame() -> image = 0;
+
+  virtual void set_manual_exposure_enabled(bool enabled) = 0;
+
+  virtual void set_exposure(float exposure) = 0;
+
+  virtual auto get_exposure() const -> float = 0;
 };

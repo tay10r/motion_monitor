@@ -4,6 +4,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -91,6 +93,19 @@ load_impl(const YAML::Node& root, config& cfg)
     config::camera_config cam_cfg;
 
     cam_cfg.device_index = node["device_index"].as<int>();
+
+    const auto exposure_mode = node["exposure_mode"].as<std::string>("");
+    if ((exposure_mode == "") || (exposure_mode == "none")) {
+      cam_cfg.exposure_mode = config::camera_exposure_mode::none;
+    } else if (exposure_mode == "manual") {
+      cam_cfg.exposure_mode = config::camera_exposure_mode::manual;
+    } else if (exposure_mode == "auto") {
+      cam_cfg.exposure_mode = config::camera_exposure_mode::automatic;
+    } else if (exposure_mode == "gradient_maximization") {
+      cam_cfg.exposure_mode = config::camera_exposure_mode::gradient_maximization;
+    } else {
+      spdlog::warn("Unknown camera exposure mode '{}'.", exposure_mode);
+    }
 
     cam_cfg.name = node["name"].as<std::string>();
 

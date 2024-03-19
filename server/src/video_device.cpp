@@ -70,6 +70,20 @@ public:
     return img;
   }
 
+  void set_manual_exposure_enabled(bool enabled) override
+  {
+    // These are magic values based on the V4L2 API.
+    //
+    // They might be camera specific, not entirely sure.
+    constexpr int manual = 1;
+    constexpr int aperture_priority = 3;
+    m_handle.set(cv::CAP_PROP_AUTO_EXPOSURE, enabled ? manual : aperture_priority);
+  }
+
+  virtual void set_exposure(float exposure) override { m_handle.set(cv::CAP_PROP_EXPOSURE, exposure); }
+
+  virtual auto get_exposure() const -> float override { return m_handle.get(cv::CAP_PROP_EXPOSURE); }
+
 protected:
   auto create_bad_image() -> image
   {

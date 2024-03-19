@@ -53,6 +53,8 @@ find_package(OpenCV REQUIRED)
 set(sources
   src/detector.h
   src/detector.cpp
+  src/exposure.h
+  src/exposure.cpp
   src/http_server.h
   src/http_server.cpp
   src/server.h

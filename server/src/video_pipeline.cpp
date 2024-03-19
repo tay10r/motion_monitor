@@ -1,6 +1,7 @@
 #include "video_pipeline.h"
 
 #include "clock.h"
+#include "exposure.h"
 #include "image.h"
 #include "video_device.h"
 #include "video_storage.h"
@@ -14,6 +15,7 @@ class video_pipeline_impl final : public video_pipeline
 public:
   explicit video_pipeline_impl(const config::camera_config& cfg)
     : m_config(cfg)
+    , m_exposure(exposure::create(m_config.exposure_mode))
   {
   }
 
@@ -38,6 +40,10 @@ public:
 
     const auto img = m_device->read_frame();
 
+    if (m_exposure) {
+      m_exposure->update(*m_device, img);
+    }
+
     if (m_storage) {
       m_storage->store(img);
     }
@@ -52,6 +58,8 @@ private:
   config::camera_config m_config;
 
   std::unique_ptr<video_device> m_device;
+
+  std::unique_ptr<exposure> m_exposure;
 
   std::unique_ptr<video_storage> m_storage;
 

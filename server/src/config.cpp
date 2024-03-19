@@ -89,12 +89,30 @@ load_impl(const YAML::Node& root, config& cfg)
   for (const auto& node : root["cameras"]) {
 
     config::camera_config cam_cfg;
+
     cam_cfg.device_index = node["device_index"].as<int>();
+
     cam_cfg.name = node["name"].as<std::string>();
-    cam_cfg.jpeg_quality = node["jpeg_quality"].as<float>();
+
+    cam_cfg.jpeg_quality = node["stream_quality"].as<float>();
+
+    const auto frame_size = node["size"];
+    if (frame_size.IsDefined() && frame_size.IsNull()) {
+      cam_cfg.frame_width = frame_size["width"].as<int>();
+      cam_cfg.frame_height = frame_size["height"].as<int>();
+    }
 
     const auto& people_detection = node["people_detection"];
     cam_cfg.people_detection_enabled = people_detection["enabled"].as<bool>();
+
+    const auto& storage = node["storage"];
+    cam_cfg.storage_enabled = storage["enabled"].as<bool>();
+    cam_cfg.storage_quality = storage["quality"].as<float>();
+    cam_cfg.storage_path = storage["directory"].as<std::string>(".");
+    cam_cfg.storage_days = storage["days"].as<float>();
+    const auto storage_size = storage["size"];
+    if (storage_size.IsDefined() && !storage_size.IsNull()) {
+    }
 
     cfg.cameras.emplace_back(std::move(cam_cfg));
   }

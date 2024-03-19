@@ -1,9 +1,11 @@
+-include config.mk
+
 DOCKER ?= docker
 BASE ?= debian:11
 ARCH ?= arm64
 VERSION := 0.1
-TAG := sentinel_builder_$(ARCH):$(VERSION)
 PLATFORM := linux/$(ARCH)
+TAG := sentinel_builder_$(ARCH):$(VERSION)
 
 .PHONY: all
 all: build

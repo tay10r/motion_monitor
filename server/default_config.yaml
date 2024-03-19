@@ -25,6 +25,46 @@ cameras:
     #
     # detector_path: ''
 
+    # The quality-to-compression ratio when sending the frames over the network.
+    #
+    stream_quality: 0.5
+
+    # Used for detection people in the video stream.
+    #
+    people_detection:
+      # Whether or not to enable people detection.
+      #
+      enabled: false
+
+    # Used for storing captured camera frames in a rolling file directory.
+    #
+    storage:
+      # Whether or not this feature is enabled.
+      #
+      enabled: true
+
+      # The directory to store the image frames in.
+      #
+      # directory: '.'
+
+      # At what size to store the captured frames at.
+      #
+      # May either be null (meaning no resize) or a dictionary containing 'width' and 'height' values, such as:
+      #   size:
+      #     width: 640
+      #     height: 480
+      size: null
+
+      # The quality at which to storage the camera frames (in terms of quality-to-compression ratio).
+      #
+      quality: 0.5
+
+      # How many days to keep each camera frame.
+      # Set it to -1.0 in order for the max time to be unlimited.
+      #
+      days: 7.0
+
+
 landscape_ui:
   grid:
     rows: 2

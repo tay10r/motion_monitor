@@ -26,6 +26,16 @@ struct config final
     int device_index{};
 
     /**
+     * @brief The width of each frame, in terms of pixels.
+     * */
+    int frame_width{ 640 };
+
+    /**
+     * @brief The height of each frame, in terms of pixels.
+     * */
+    int frame_height{ 480 };
+
+    /**
      * @brief The quality of JPEG to produce - a trade off between bandwidth and image quality.
      * */
     float jpeg_quality{ 0.5f };
@@ -34,6 +44,36 @@ struct config final
      * @brief Whether or not to enable the HOG-SVM people detector.
      * */
     bool people_detection_enabled{ false };
+
+    /**
+     * @brief Whether or not to store camera frames.
+     * */
+    bool storage_enabled{ true };
+
+    /**
+     * @brief At what quality to store the camera frames.
+     * */
+    float storage_quality{ 0.5f };
+
+    /**
+     * @brief Where to store the camera frames.
+     * */
+    std::string storage_path{ "." };
+
+    /**
+     * @brief The number of days to store each frame.
+     * */
+    float storage_days{ 7.0f };
+
+    /**
+     * @brief The width of each frame, when put into storage.
+     * */
+    int storage_width{ -1 };
+
+    /**
+     * @brief The height of each frame, when put into storage.
+     * */
+    int storage_height{ -1 };
   };
 
   struct microphone_config final

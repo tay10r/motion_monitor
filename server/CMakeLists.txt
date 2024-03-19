@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14.7)
 
 project(sentinel_server)
 
-option(FAKE_VIDEO_DEVICE "Whether or not to fake the video device API." OFF)
 option(ENABLE_TESTING "Whether or not to build the tests." OFF)
 option(ENABLE_AUDIO "Whether or not to include audio support." ON)
 
@@ -67,8 +66,11 @@ set(sources
   src/pipeline_runner.h
   src/pipeline_runner.cpp
   src/video_device.h
+  src/video_device.cpp
   src/video_pipeline.h
-  src/video_pipeline.cpp)
+  src/video_pipeline.cpp
+  src/video_storage.h
+  src/video_storage.cpp)
 
 if(ENABLE_AUDIO)
   list(APPEND sources
@@ -76,15 +78,6 @@ if(ENABLE_AUDIO)
     src/microphone_device.cpp
     src/microphone_pipeline.h
     src/microphone_pipeline.cpp)
-endif()
-
-set(video_device src/fake_video_device.cpp)
-
-if(NOT FAKE_VIDEO_DEVICE)
-  list(APPEND sources src/video_device.cpp)
-else()
-  list(APPEND sources
-    src/video_device.cpp)
 endif()
 
 add_library(sentinel_server ${sources})

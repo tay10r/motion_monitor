@@ -7,3 +7,4 @@ emscripten-build
 *.deb
 __pycache__
 venv
+config.mk

@@ -2,6 +2,7 @@
 
 #include <opencv2/videoio.hpp>
 
+#include "clock.h"
 #include "image.h"
 
 #include <random>
@@ -12,9 +13,24 @@ namespace {
 class video_device_impl final : public video_device
 {
 public:
-  auto open(int device_index) -> bool override
+  auto open(int device_index, int frame_w, int frame_h) -> bool override
   {
     m_handle.open(device_index, cv::CAP_V4L2);
+
+    m_frame_width = frame_w;
+
+    m_frame_height = frame_h;
+
+    if (m_handle.isOpened()) {
+
+      m_handle.set(cv::CAP_PROP_FRAME_WIDTH, frame_w);
+
+      m_handle.set(cv::CAP_PROP_FRAME_HEIGHT, frame_h);
+
+      m_frame_width = m_handle.get(cv::CAP_PROP_FRAME_WIDTH);
+
+      m_frame_height = m_handle.get(cv::CAP_PROP_FRAME_HEIGHT);
+    }
 
     return m_handle.isOpened();
   }
@@ -25,29 +41,31 @@ public:
       return create_bad_image();
     }
 
-    cv::Mat data;
+    cv::Mat frame;
 
-    m_handle.read(data);
+    m_handle.read(frame);
 
-    cv::Mat rgb_data;
-
-    data.convertTo(rgb_data, CV_8UC3);
+    const auto t = get_clock_time();
 
     image img;
 
-    img.resize(rgb_data.cols, rgb_data.rows, 3);
+    img.time = t;
 
-    for (std::size_t i = 0; i < (rgb_data.cols * rgb_data.rows); i++) {
+    img.resize(frame.cols, frame.rows, 3);
 
-      const auto x = i % rgb_data.cols;
-      const auto y = i / rgb_data.cols;
+    for (std::size_t i = 0; i < (frame.cols * frame.rows); i++) {
 
-      const auto pixel = rgb_data.at<cv::Vec3b>(y, x);
+      const auto x = i % frame.cols;
+      const auto y = i / frame.cols;
 
-      img.data.at(i * 3 + 0) = pixel[0];
+      const auto pixel = frame.at<cv::Vec3b>(y, x);
+
+      img.data.at(i * 3 + 0) = pixel[2];
       img.data.at(i * 3 + 1) = pixel[1];
-      img.data.at(i * 3 + 2) = pixel[2];
+      img.data.at(i * 3 + 2) = pixel[0];
     }
+
+    img.frame = std::move(frame);
 
     return img;
   }
@@ -55,19 +73,28 @@ public:
 protected:
   auto create_bad_image() -> image
   {
-    const int w = 640;
-    const int h = 480;
+    const int w = m_frame_width;
+
+    const int h = m_frame_height;
 
     image img;
+
+    img.time = get_clock_time();
 
     img.resize(w, h, 3);
 
     std::uniform_int_distribution<int> dist(0, 255);
 
     for (int i = 0; i < (w * h); i++) {
-      img.data[i * 3 + 0] = dist(m_rng);
-      img.data[i * 3 + 1] = dist(m_rng);
-      img.data[i * 3 + 2] = dist(m_rng);
+
+      const auto r = dist(m_rng);
+      const auto g = dist(m_rng);
+      const auto b = dist(m_rng);
+
+      img.data[i * 3 + 0] = r;
+      img.data[i * 3 + 1] = g;
+      img.data[i * 3 + 2] = b;
+      img.frame.at<cv::Vec3b>(i) = cv::Vec3b(b, g, r);
     }
 
     return img;
@@ -77,6 +104,10 @@ private:
   cv::VideoCapture m_handle;
 
   std::mt19937 m_rng{ 0 };
+
+  int m_frame_width{ 640 };
+
+  int m_frame_height{ 480 };
 };
 
 } // namespace

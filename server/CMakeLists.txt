@@ -53,8 +53,6 @@ find_package(OpenCV REQUIRED)
 set(sources
   src/detector.h
   src/detector.cpp
-  src/exposure.h
-  src/exposure.cpp
   src/http_server.h
   src/http_server.cpp
   src/server.h
@@ -98,6 +96,10 @@ target_link_libraries(sentinel_server
     llhttp::llhttp
     nlohmann_json::nlohmann_json
     yaml-cpp::yaml-cpp)
+
+target_compile_features(sentinel_server
+  PUBLIC
+    cxx_std_17)
 
 target_include_directories(sentinel_server
   PUBLIC

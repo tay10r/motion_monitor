@@ -125,8 +125,11 @@ load_impl(const YAML::Node& root, config& cfg)
     cam_cfg.storage_quality = storage["quality"].as<float>();
     cam_cfg.storage_path = storage["directory"].as<std::string>(".");
     cam_cfg.storage_days = storage["days"].as<float>();
+    cam_cfg.storage_rate = storage["rate"].as<float>();
     const auto storage_size = storage["size"];
     if (storage_size.IsDefined() && !storage_size.IsNull()) {
+      cam_cfg.storage_width = storage_size["width"].as<int>();
+      cam_cfg.storage_height = storage_size["height"].as<int>();
     }
 
     cfg.cameras.emplace_back(std::move(cam_cfg));

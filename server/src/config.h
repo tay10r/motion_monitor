@@ -102,6 +102,11 @@ struct config final
      * @brief The height of each frame, when put into storage.
      * */
     int storage_height{ -1 };
+
+    /**
+     * @brief The number of seconds between storing frames.
+     * */
+    float storage_rate{ 1.0f };
   };
 
   struct microphone_config final

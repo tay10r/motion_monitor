@@ -14,7 +14,7 @@ public:
 
   using time_point = typename clock_type::time_point;
 
-  static auto create(std::string path, float quality, float days, int storage_width, int storage_height)
+  static auto create(std::string path, float quality, float days, int storage_width, int storage_height, float rate)
     -> std::unique_ptr<video_storage>;
 
   virtual ~video_storage() = default;

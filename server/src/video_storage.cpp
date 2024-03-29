@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <limits>
+#include <optional>
 #include <sstream>
 
 namespace {
@@ -35,13 +36,15 @@ public:
                               const float quality,
                               const float days,
                               const int storage_width,
-                              const int storage_height)
+                              const int storage_height,
+                              const float rate)
     : m_path(std::move(path))
     , m_quality(quality)
     , m_days(days)
     , m_max_dt(get_max_dt(days))
     , m_storage_width(storage_width)
     , m_storage_height(storage_height)
+    , m_rate(rate)
   {
     for (const auto entry : std::filesystem::directory_iterator(m_path)) {
 
@@ -75,6 +78,15 @@ public:
       return;
     }
 
+    if (m_last_time.has_value()) {
+      const auto last_t = m_last_time.value();
+      const auto t = img.time;
+      const auto elapsed = static_cast<double>(t - last_t) * 1.0e-6;
+      if (elapsed < (1.0 / m_rate)) {
+        return;
+      }
+    }
+
     std::ostringstream path_stream;
     if (!m_path.empty()) {
       path_stream << m_path << '/';
@@ -92,6 +104,8 @@ public:
     cv::Mat frame;
     cv::resize(img.frame, frame, cv::Size(m_storage_width, m_storage_height));
     store(std::move(path), frame, img.time);
+
+    m_last_time = img.time;
   }
 
 protected:
@@ -139,13 +153,17 @@ private:
   int m_storage_height{ -1 };
 
   std::vector<std::pair<std::uint64_t, std::string>> m_existing_paths;
+
+  float m_rate{ 1 };
+
+  std::optional<std::uint64_t> m_last_time;
 };
 
 } // namespace
 
 auto
-video_storage::create(std::string path, float quality, float days, int storage_width, int storage_height)
+video_storage::create(std::string path, float quality, float days, int storage_width, int storage_height, float rate)
   -> std::unique_ptr<video_storage>
 {
-  return std::make_unique<video_storage_impl>(std::move(path), quality, days, storage_width, storage_height);
+  return std::make_unique<video_storage_impl>(std::move(path), quality, days, storage_width, storage_height, rate);
 }

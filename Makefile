@@ -7,13 +7,16 @@ VERSION := 0.1
 PLATFORM := linux/$(ARCH)
 TAG := sentinel_builder_$(ARCH):$(VERSION)
 
+build_opts = --rm --name sentinel_builder
+build_opts += --mount type=bind,source=$(PWD)/dist,destination=/home/user/dist
+build_opts += --mount type=bind,source=$(PWD)/dist,destination=/home/user/src
+
 .PHONY: all
 all: build
 
 .PHONY: build
 build:
-	$(DOCKER) run --name sentinel_builder --mount type=bind,source=$(PWD)/dist,destination=/home/user/dist -it $(TAG)
-	$(DOCKER) rm sentinel_builder
+	$(DOCKER) run $(build_opts) -it $(TAG)
 
 .PHONY: builder
 builder:

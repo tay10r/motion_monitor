@@ -21,7 +21,7 @@ target_link_libraries(sentinel_proto
     stb)
 
 target_compile_features(sentinel_proto
-  PRIVATE
+  PUBLIC
     cxx_std_17)
 
 add_library(sentinel::proto ALIAS sentinel_proto)

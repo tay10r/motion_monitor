@@ -35,7 +35,7 @@ public:
     return m_handle.isOpened();
   }
 
-  auto read_frame() -> image override
+  auto read_frame() -> std::optional<image> override
   {
     if (!m_handle.isOpened()) {
       return create_bad_image();
@@ -43,7 +43,9 @@ public:
 
     cv::Mat frame;
 
-    m_handle.read(frame);
+    if (!m_handle.read(frame)) {
+      return std::nullopt;
+    }
 
     const auto t = get_clock_time();
 

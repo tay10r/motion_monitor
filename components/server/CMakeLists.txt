@@ -70,7 +70,9 @@ set(sources
   src/video_pipeline.h
   src/video_pipeline.cpp
   src/video_storage.h
-  src/video_storage.cpp)
+  src/video_storage.cpp
+  src/video_frame_filter.h
+  src/video_frame_filter.cpp)
 
 if(ENABLE_AUDIO)
   list(APPEND sources

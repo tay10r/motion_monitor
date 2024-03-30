@@ -25,25 +25,9 @@ cameras:
     #
     # detector_path: ''
 
-    # Set the exposure mode to either:
-    #
-    #   - 'none'
-    #     The exposure mode is not modified at all.
-    #
-    #   - 'auto'
-    #     The exposure mode is set to automatic.
-    #
-    #   - 'manual'
-    #     The exposure mode is set to manual.
-    #
-    #   - 'gradient_maximization'
-    #     The exposure mode is set to manual and modified to maximize the image gradient magnitude.
-    #
-    exposure_mode: 'gradient_maximization'
-
     # The quality-to-compression ratio when sending the frames over the network.
     #
-    stream_quality: 0.5
+    stream_quality: 1.0
 
     # Used for detection people in the video stream.
     #
@@ -51,6 +35,27 @@ cameras:
       # Whether or not to enable people detection.
       #
       enabled: false
+
+    # Used for discarding frames that may not be of interest to the rest of the system.
+    # Frames that are discarded will neither get streamed or stored on disk.
+    #
+    frame_filter:
+      # Whether or not to enable the filter (default is false).
+      #
+      enabled: true
+
+      # The path of the ONNX model that performs the filtering.
+      # This model should be a binary image classifier (one scalar output)
+      #
+      model_path: 'frame_filter.onnx'
+
+      # The index of the output containing the filter output.
+      #
+      output_index: 0
+
+      # Whether or not to apply the sigmoid function to the output of the model.
+      #
+      apply_sigmoid: true
 
     # Used for storing captured camera frames in a rolling file directory.
     #
@@ -80,11 +85,14 @@ cameras:
       #
       days: 7.0
 
+      # Maximum number of frames per second to put into storage.
+      rate: 1.0
+
 
 landscape_ui:
   grid:
-    rows: 2
-    cols: 3
+    rows: 1
+    cols: 1
   camera_widgets:
     - label: 'Front Door Camera'
       sensor_id: 0

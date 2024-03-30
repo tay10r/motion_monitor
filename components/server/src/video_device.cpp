@@ -47,7 +47,7 @@ public:
       return std::nullopt;
     }
 
-    const auto t = get_clock_time();
+    const auto t = sentinel::get_clock_time();
 
     image img;
 
@@ -95,7 +95,7 @@ protected:
 
     image img;
 
-    img.time = get_clock_time();
+    img.time = sentinel::get_clock_time();
 
     img.resize(w, h, 3);
 

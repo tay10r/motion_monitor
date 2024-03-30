@@ -94,19 +94,6 @@ load_impl(const YAML::Node& root, config& cfg)
 
     cam_cfg.device_index = node["device_index"].as<int>();
 
-    const auto exposure_mode = node["exposure_mode"].as<std::string>("");
-    if ((exposure_mode == "") || (exposure_mode == "none")) {
-      cam_cfg.exposure_mode = config::camera_exposure_mode::none;
-    } else if (exposure_mode == "manual") {
-      cam_cfg.exposure_mode = config::camera_exposure_mode::manual;
-    } else if (exposure_mode == "auto") {
-      cam_cfg.exposure_mode = config::camera_exposure_mode::automatic;
-    } else if (exposure_mode == "gradient_maximization") {
-      cam_cfg.exposure_mode = config::camera_exposure_mode::gradient_maximization;
-    } else {
-      spdlog::warn("Unknown camera exposure mode '{}'.", exposure_mode);
-    }
-
     cam_cfg.name = node["name"].as<std::string>();
 
     cam_cfg.jpeg_quality = node["stream_quality"].as<float>();
@@ -130,6 +117,14 @@ load_impl(const YAML::Node& root, config& cfg)
     if (storage_size.IsDefined() && !storage_size.IsNull()) {
       cam_cfg.storage_width = storage_size["width"].as<int>();
       cam_cfg.storage_height = storage_size["height"].as<int>();
+    }
+
+    const auto& frame_filter = node["frame_filter"];
+    if (frame_filter.IsDefined() && !frame_filter.IsNull()) {
+      cam_cfg.frame_filter_enabled = frame_filter["enabled"].as<bool>();
+      cam_cfg.frame_filter_model_path = frame_filter["model_path"].as<std::string>();
+      cam_cfg.frame_filter_apply_sigmoid = frame_filter["apply_sigmoid"].as<bool>();
+      cam_cfg.frame_filter_output_index = frame_filter["output_index"].as<std::size_t>();
     }
 
     cfg.cameras.emplace_back(std::move(cam_cfg));

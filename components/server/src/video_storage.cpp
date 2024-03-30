@@ -98,6 +98,7 @@ public:
 
     if ((m_storage_width < 0) || (m_storage_height < 0)) {
       store(std::move(path), img.frame, img.time);
+      m_last_time = img.time;
       return;
     }
 

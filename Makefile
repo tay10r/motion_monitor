@@ -8,8 +8,8 @@ PLATFORM := linux/$(ARCH)
 TAG := sentinel_builder_$(ARCH):$(VERSION)
 
 build_opts = --rm --name sentinel_builder
-build_opts += --mount type=bind,source=$(PWD)/dist,destination=/home/user/dist
-build_opts += --mount type=bind,source=$(PWD)/dist,destination=/home/user/src
+build_opts += --mount type=bind,source=$(PWD)/artifacts,destination=/usr/local/src/artifacts
+build_opts += --mount type=bind,source=$(PWD)/components,destination=/usr/local/src/components,readonly
 
 .PHONY: all
 all: build

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -8,29 +7,6 @@
 
 struct config final
 {
-  enum class camera_exposure_mode
-  {
-    /**
-     * @brief The exposure mode is not controlled in this case.
-     * */
-    none,
-
-    /**
-     * @brief The exposure is manually controlled.
-     * */
-    manual,
-
-    /**
-     * @brief The camera's auto exposure is used.
-     * */
-    automatic,
-
-    /**
-     * @brief The exposure level is optimized to increase the gradient magnitude of the image.
-     * */
-    gradient_maximization
-  };
-
   struct camera_config final
   {
     /**
@@ -57,11 +33,6 @@ struct config final
      * @brief The height of each frame, in terms of pixels.
      * */
     int frame_height{ 480 };
-
-    /**
-     * @brief Used for deciding how to control the exposure.
-     * */
-    camera_exposure_mode exposure_mode{ camera_exposure_mode::none };
 
     /**
      * @brief The quality of JPEG to produce - a trade off between bandwidth and image quality.
@@ -107,6 +78,31 @@ struct config final
      * @brief The number of seconds between storing frames.
      * */
     float storage_rate{ 1.0f };
+
+    /**
+     * @brief Whether or not to enable frame filtering.
+     * */
+    bool frame_filter_enabled{ false };
+
+    /**
+     * @brief The path to the model to use when filtering frames.
+     * */
+    std::string frame_filter_model_path;
+
+    /**
+     * @brief The index of the filter model output containing binary classification.
+     * */
+    std::size_t frame_filter_output_index{ 0 };
+
+    /**
+     * @brief Whether or not to apply the sigmoid function to the filter output.
+     * */
+    bool frame_filter_apply_sigmoid{ true };
+
+    /**
+     * @brief The maximum amount of time that the filter is allowed to reject frames.
+     * */
+    double frame_filter_max_time{ 900 /* 15 minutes */ };
   };
 
   struct microphone_config final

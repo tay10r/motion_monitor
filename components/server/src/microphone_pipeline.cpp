@@ -32,7 +32,7 @@ public:
 
     const auto buffer_duration = static_cast<float>(samples.size()) / static_cast<float>(m_sample_rate);
 
-    const auto time = get_clock_time() - static_cast<std::uint64_t>(buffer_duration * 1.0e6);
+    const auto time = sentinel::get_clock_time() - static_cast<std::uint64_t>(buffer_duration * 1.0e6);
 
     auto msg = sentinel::proto::writer::create_microphone_update(
       samples.data(), samples.size(), m_sample_rate, time, m_config.sensor_id);

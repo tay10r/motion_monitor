@@ -3,6 +3,7 @@
 #include "clock.h"
 #include "image.h"
 #include "video_device.h"
+#include "video_frame_filter.h"
 #include "video_storage.h"
 
 #include <sentinel/proto.h>
@@ -30,6 +31,15 @@ public:
       }
     }
 
+    if (m_config.frame_filter_enabled) {
+      if (!m_frame_filter) {
+        m_frame_filter = video_frame_filter::create(m_config.frame_filter_model_path,
+                                                    m_config.frame_filter_output_index,
+                                                    m_config.frame_filter_apply_sigmoid,
+                                                    m_config.frame_filter_max_time);
+      }
+    }
+
     if (!m_device) {
 
       m_device = video_device::create();
@@ -43,12 +53,21 @@ public:
       return {};
     }
 
+    if (m_frame_filter && !m_frame_filter->filter(img.value())) {
+      return {};
+    }
+
     if (m_storage) {
       m_storage->store(img.value());
     }
 
-    auto msg = sentinel::proto::writer::create_rgb_camera_update(
-      img->data.data(), img->width, img->height, get_clock_time(), m_config.sensor_id, {}, m_config.jpeg_quality);
+    auto msg = sentinel::proto::writer::create_rgb_camera_update(img->data.data(),
+                                                                 img->width,
+                                                                 img->height,
+                                                                 sentinel::get_clock_time(),
+                                                                 m_config.sensor_id,
+                                                                 {},
+                                                                 m_config.jpeg_quality);
 
     return { std::move(msg) };
   }
@@ -59,6 +78,8 @@ private:
   std::unique_ptr<video_device> m_device;
 
   std::unique_ptr<video_storage> m_storage;
+
+  std::unique_ptr<video_frame_filter> m_frame_filter;
 
   bool m_opened{ false };
 };

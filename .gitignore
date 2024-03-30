@@ -8,3 +8,5 @@ emscripten-build
 __pycache__
 venv
 config.mk
+artifacts
+!artifacts/.gitkeep

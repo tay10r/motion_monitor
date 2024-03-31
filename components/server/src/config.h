@@ -103,6 +103,28 @@ struct config final
      * @brief The maximum amount of time that the filter is allowed to reject frames.
      * */
     double frame_filter_max_time{ 900 /* 15 minutes */ };
+
+    /**
+     * @brief The threshold to consider the filter output as a positive sample.
+     * */
+    double frame_filter_threshold{ 0.5 };
+
+    /**
+     * @brief The width to resize the frame before feeding it to the frame filter.
+     *        Negative one means no change.
+     * */
+    int frame_filter_input_width{ -1 };
+
+    /**
+     * @brief The height to resize the frame before feeding it to the frame filter.
+     *        Negative one means no change.
+     * */
+    int frame_filter_input_height{ -1 };
+
+    /**
+     * @brief Whether or not to convert the image to grayscale.
+     * */
+    bool frame_filter_input_grayscale{ false };
   };
 
   struct microphone_config final

@@ -125,6 +125,16 @@ load_impl(const YAML::Node& root, config& cfg)
       cam_cfg.frame_filter_model_path = frame_filter["model_path"].as<std::string>();
       cam_cfg.frame_filter_apply_sigmoid = frame_filter["apply_sigmoid"].as<bool>();
       cam_cfg.frame_filter_output_index = frame_filter["output_index"].as<std::size_t>();
+      cam_cfg.frame_filter_max_time = frame_filter["max_time"].as<double>();
+      cam_cfg.frame_filter_threshold = frame_filter["threshold"].as<double>(0.5);
+
+      const auto& resize = frame_filter["resize_transform"];
+      if (resize.IsDefined() && !resize.IsNull()) {
+        cam_cfg.frame_filter_input_width = resize["width"].as<int>();
+        cam_cfg.frame_filter_input_height = resize["height"].as<int>();
+      }
+
+      cam_cfg.frame_filter_input_grayscale = frame_filter["grayscale_transform"].as<bool>();
     }
 
     cfg.cameras.emplace_back(std::move(cam_cfg));
@@ -273,4 +283,3 @@ config::validate() const
 
   check_unique_names(microphones, [](const microphone_config& cfg) -> std::string { return cfg.name; });
 }
-

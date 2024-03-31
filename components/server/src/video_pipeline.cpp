@@ -36,7 +36,11 @@ public:
         m_frame_filter = video_frame_filter::create(m_config.frame_filter_model_path,
                                                     m_config.frame_filter_output_index,
                                                     m_config.frame_filter_apply_sigmoid,
-                                                    m_config.frame_filter_max_time);
+                                                    m_config.frame_filter_threshold,
+                                                    m_config.frame_filter_max_time,
+                                                    m_config.frame_filter_input_width,
+                                                    m_config.frame_filter_input_height,
+                                                    m_config.frame_filter_input_grayscale);
       }
     }
 

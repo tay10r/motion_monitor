@@ -57,6 +57,23 @@ cameras:
       #
       apply_sigmoid: true
 
+      # Do not let the filter reject frames for this many seconds.
+      # If this many seconds pass by without a frame passing the filter, then one is let through and the timer restarts.
+      # The default is 900 seconds, which is 15 minutes.
+      #
+      max_time: 900.0
+
+      # When the filter model is expecting a certain input size, this transform can be used to resize the image into a
+      # shape that the model can work with.
+      #
+      resize_transform:
+        width: 160
+        height: 120
+
+      # Wether or not the input to the frame filter should be converted to grayscale.
+      #
+      grayscale_transform: true
+
     # Used for storing captured camera frames in a rolling file directory.
     #
     storage:

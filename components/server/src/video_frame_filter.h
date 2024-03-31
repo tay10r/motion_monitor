@@ -26,8 +26,14 @@ public:
    *
    * @return A new video frame filter.
    * */
-  static auto create(const std::string& model_path, std::size_t output_index, bool apply_sigmoid, double max_time)
-    -> std::unique_ptr<video_frame_filter>;
+  static auto create(const std::string& model_path,
+                     std::size_t output_index,
+                     bool apply_sigmoid,
+                     double threshold,
+                     double max_time,
+                     int input_w,
+                     int input_h,
+                     bool input_grayscale) -> std::unique_ptr<video_frame_filter>;
 
   virtual ~video_frame_filter() = default;
 

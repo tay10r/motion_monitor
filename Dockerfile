@@ -7,7 +7,9 @@ RUN apt-get install -y \
   python3 python3-pip \
   libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxkbcommon-x11-dev libx11-xcb-dev libxrandr-dev libxcursor-dev libxdamage-dev libxinerama-dev \
   bison flex
-RUN pip3 install cmake jinja2
+RUN apt install -y cmake
+RUN pip3 install --upgrade pip setuptools wheel jinja2
+#RUN pip3 install cmake
 
 # Expect in this directory:
 #

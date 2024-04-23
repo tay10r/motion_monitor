@@ -92,6 +92,8 @@ load_impl(const YAML::Node& root, config& cfg)
 
     config::camera_config cam_cfg;
 
+    cam_cfg.sensor_id = node["sensor_id"].as<std::uint32_t>();
+
     cam_cfg.device_index = node["device_index"].as<int>();
 
     cam_cfg.name = node["name"].as<std::string>();

@@ -1,8 +1,5 @@
 #include "camera_widget.h"
 
-#include "stop_watch.h"
-#include "telemetry_stream.h"
-
 #include <sentinel/proto.h>
 
 #include <GLES2/gl2.h>
@@ -14,6 +11,8 @@
 #include <chrono>
 #include <sstream>
 
+#include <iostream>
+
 namespace {
 
 class camera_widget_impl final
@@ -22,7 +21,10 @@ class camera_widget_impl final
 {
 public:
   explicit camera_widget_impl(const config::camera_widget_config& cfg)
+    : m_config(cfg)
   {
+    std::cout << "constructing camera widget" << std::endl;
+
     glGenTextures(1, &m_texture);
 
     glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -68,6 +70,10 @@ public:
 protected:
   void visit_rgb_camera_frame_event(const sentinel::proto::camera_frame_event& ev) override
   {
+    if (ev.sensor_id != m_config.sensor_id) {
+      return;
+    }
+
     std::vector<std::uint8_t> rgba(ev.w * ev.h * 4, 0);
 
     for (std::size_t i = 0; i < (static_cast<std::size_t>(ev.w) * ev.h); i++) {
@@ -83,6 +89,10 @@ protected:
 
   void visit_monochrome_camera_frame_event(const sentinel::proto::camera_frame_event& ev) override
   {
+    if (ev.sensor_id != m_config.sensor_id) {
+      return;
+    }
+
     std::vector<std::uint8_t> rgba(ev.w * ev.h * 4);
 
     for (std::size_t i = 0; i < (static_cast<std::size_t>(ev.w) * ev.h); i++) {
@@ -122,6 +132,8 @@ protected:
   }
 
 private:
+  config::camera_widget_config m_config;
+
   GLuint m_texture{};
 
   GLsizei m_width{};

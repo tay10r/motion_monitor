@@ -55,7 +55,7 @@ protected:
   {
     m_landscape_dashboard = dashboard(m_config.landscape_ui);
 
-    m_portrait_dashboard = dashboard(m_config.portrait_ui);
+    // m_portrait_dashboard = dashboard(m_config.portrait_ui);
   }
 
   void render_main_window()
@@ -65,7 +65,7 @@ protected:
     if (display_size.x >= display_size.y) {
       m_landscape_dashboard.render(ImGui::GetIO().DisplaySize);
     } else {
-      m_portrait_dashboard.render(ImGui::GetIO().DisplaySize);
+      // m_portrait_dashboard.render(ImGui::GetIO().DisplaySize);
     }
   }
 
@@ -123,7 +123,7 @@ private:
 
   dashboard m_landscape_dashboard;
 
-  dashboard m_portrait_dashboard;
+  // dashboard m_portrait_dashboard;
 };
 
 } // namespace
